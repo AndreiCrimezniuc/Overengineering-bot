@@ -1,6 +1,7 @@
 {
   "include": [
-    "src/index.ts"
+    "src/**/*.ts",
+    "node_modules/@types"
   ],
   "compilerOptions": {
     /* Visit https://aka.ms/tsconfig.json to read more about this file */
