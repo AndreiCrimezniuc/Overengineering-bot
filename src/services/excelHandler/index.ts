@@ -35,7 +35,7 @@ async function GetRows(spreadsheetID: string, credentials: string): Promise<Gaxi
 
     const rows = client.spreadsheets.values.get({
         spreadsheetId: spreadsheetID,
-        range: "List1"
+        range: "Zoom ВПС"
     })
 
     return rows

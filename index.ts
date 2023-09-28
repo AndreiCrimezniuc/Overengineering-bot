@@ -15,8 +15,9 @@ function main() {
     tgBot.Run()
 
     console.log('Bot is started')
-
-    const TestNote = GetRows('1btrFurxdm2LUVZIgwQZMhuS9ji7dpCZWheDM6UyiqK0', 'credentials.json').then((data) => {
+    const sheetID = '1Lf6DOhvbrKjpYIdGU-FMwRhBeNqBMkttQuxojPm47D8'
+    // const sheetID = '1btrFurxdm2LUVZIgwQZMhuS9ji7dpCZWheDM6UyiqK0'
+    const TestNote = GetRows(sheetID, 'credentials.json').then((data) => {
         if (data != null) {
             console.log(data.data)
         } else {
