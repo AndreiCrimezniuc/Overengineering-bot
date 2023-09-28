@@ -1,10 +1,10 @@
 import TgBot from "./src/services/telegram";
-const { CreateNote, GetNote } = require('./src/services/excelHandler');
+import {GetRows} from "./src/services/excelHandler";
 
 require('dotenv').config()
 
 function main() {
-    const tgToken =  process.env.TELEGRAM_TOKEN
+    const tgToken = process.env.TELEGRAM_TOKEN
 
     if (tgToken === undefined) {
         console.error("telegram token is not provided in .env")
@@ -14,8 +14,15 @@ function main() {
     const tgBot = new TgBot(tgToken)
     tgBot.Run()
 
-    const TestNote = GetNote('1btrFurxdm2LUVZIgwQZMhuS9ji7dpCZWheDM6UyiqK0')
-    console.log(TestNote)
+    console.log('Bot is started')
+
+    const TestNote = GetRows('1btrFurxdm2LUVZIgwQZMhuS9ji7dpCZWheDM6UyiqK0', 'credentials.json').then((data) => {
+        if (data != null) {
+            console.log(data.data)
+        } else {
+            console.error('Here is nothing inside')
+        }
+    })
 }
 
 main()

@@ -1,12 +1,13 @@
 import {google} from 'googleapis'
+import {GaxiosResponse} from "gaxios/build/src/common";
 
 interface SheetValues<T> {
     [row: string | number]: T[]
 }
 
-async function CreateClient() {
+async function CreateClient(credentials: string) {
     const auth = new google.auth.GoogleAuth({
-        keyFile: "credentials.json",
+        keyFile: credentials,
         scopes: "https://www.googleapis.com/auth/spreadsheets"
     });
 
@@ -20,8 +21,8 @@ async function CreateClient() {
     return google.sheets({version: "v4"});
 }
 
-async function GetRows(spreadsheetID: string) {
-    const client = await CreateClient();
+async function GetRows(spreadsheetID: string, credentials: string): Promise<GaxiosResponse | null> {
+    const client = await CreateClient(credentials);
 
     try {
         const metaData = client.spreadsheets.get({
@@ -32,21 +33,14 @@ async function GetRows(spreadsheetID: string) {
         return null
     }
 
-    const getRows = client.spreadsheets.values.get({
-        spreadsheetID,
+    const rows = client.spreadsheets.values.get({
+        spreadsheetId: spreadsheetID,
         range: "List1"
     })
 
-    return getRows.data;
+    return rows
 }
 
-catch
-(error)
-{
-    console.error("Error retrieving spreadsheet data:", error);
-    //idk how to handle error in node. Seems like we need just throw and catch when call GetNote
-}
-}
 
 // async function CreateNote(spreadsheetID: string, values: SheetValues<any>[]) {
 //     const client = await CreateClient()
@@ -78,6 +72,6 @@ catch
 // }
 
 export {
-    CreateNote
-    // GetNote
+    // CreateNote,
+    GetRows
 }
