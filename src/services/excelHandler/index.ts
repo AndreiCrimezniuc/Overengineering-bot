@@ -23,6 +23,7 @@ async function CreateClient(credentials: string) {
 
 async function GetRows(spreadsheetID: string, credentials: string): Promise<GaxiosResponse | null> {
     const client = await CreateClient(credentials);
+    console.log("Get Rows not is runned?")
 
     try {
         const metaData = client.spreadsheets.get({
@@ -35,7 +36,7 @@ async function GetRows(spreadsheetID: string, credentials: string): Promise<Gaxi
 
     const rows = client.spreadsheets.values.get({
         spreadsheetId: spreadsheetID,
-        range: "Zoom ВПС"
+        range: "График распорядителей"
     })
 
     return rows
