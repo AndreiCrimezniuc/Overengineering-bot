@@ -1,28 +1,26 @@
 import TgBot from "./src/services/telegram";
 import {GetRows} from "./src/services/excelHandler";
+import {GetConfig} from "./src/services/config/config";
 
 require('dotenv').config()
 
 async function main() {
-    const tgToken = process.env.TELEGRAM_TOKEN
-
-    if (tgToken === undefined) {
-        console.error("telegram token is not provided in .env")
+    const config = GetConfig()
+    if (config === undefined) {
         process.exit(1)
     }
 
-    const tgBot = new TgBot(tgToken)
+    const tgBot = new TgBot(config.TelegramToken)
+
     tgBot.Run()
 
     console.log('Bot is started')
-    const sheetID = '1Lf6DOhvbrKjpYIdGU-FMwRhBeNqBMkttQuxojPm47D8'
 
-    const TestNote =  async () => {
-        console.log("Test not is runned?")
-        await GetRows(sheetID, 'credentials.json').then((data) => {
+    const NotifyNow =  async () => {
+        await GetRows(config.SpreadSheetID, 'credentials.json').then((data) => {
             if (data != null) {
 
-                sendNotification(data.data.values, tgBot)
+                handleRowsFromExcel(data.data.values, tgBot)
 
             } else {
                 console.error('Here is nothing inside')
@@ -30,16 +28,19 @@ async function main() {
         })
     }
 
-    while(true) {
-        await new Promise(r => setTimeout(r, 9000));
-        console.log('Trying to run TestNote')
-        await TestNote()
-    }
+    await LoopUntilItsTime(NotifyNow)
 }
 
 main()
 
-function sendNotification(names: string[][], bot: TgBot) {
+ async function LoopUntilItsTime(NotifyNow: () => void ) {
+     while (true) {
+         await new Promise(r => setTimeout(r, 9000));
+         await NotifyNow()
+     }
+ }
+
+function handleRowsFromExcel(names: string[][], bot: TgBot) {
     for (let i = 1; i<names.length; i++) {
         handleRow(names[i], bot)
         console.log(`Handlind ${i}`)
