@@ -1,8 +1,9 @@
-import TelegramBot, {Message} from 'node-telegram-bot-api';
+import TelegramBot from 'node-telegram-bot-api';
 
 class TgBot {
     private bot: TelegramBot
     private currentChatID: number
+    private notifyCallback: (() => void) | undefined
 
     constructor(token: string) {
         this.bot = new TelegramBot(token, {
@@ -11,11 +12,15 @@ class TgBot {
         this.currentChatID = 947727005 // default non-sense value
     }
 
+    public SetNotifyCallback(notify: () => void) {
+        this.notifyCallback = notify
+    }
+
     public Run() {
         this.invokeEvents()
     }
 
-    public SendMsg( text: string,chatID: number = this.currentChatID,):Promise<TelegramBot.Message> {
+    public SendMsg(text: string, chatID: number = this.currentChatID,): Promise<TelegramBot.Message> {
         return this.bot.sendMessage(chatID, text);
     }
 
@@ -24,12 +29,20 @@ class TgBot {
             this.currentChatID = msg.chat.id
         })
 
-        this.bot.on('message', (msg) => {
-            const chatId = msg.chat.id;
+        this.bot.onText(/\/force/, (msg) => {
+            console.log("trying to notify...")
+            this.notifyCallback ? this.notifyCallback() : this.SendMsg("there is no notify callback")
+        })
 
-            // send a message to the chat acknowledging receipt of their message
-            this.bot.sendMessage(chatId, `I have ${this.currentChatID}`);
+        this.bot.on('message', (msg) => {
+            if (this.currentChatID === undefined) {
+                const chatId = msg.chat.id;
+                this.currentChatID = msg.chat.id
+                this.bot.sendMessage(chatId, `I'm listening you now ${this.currentChatID}`);
+            }
         });
+
+
     }
 }
 

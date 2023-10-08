@@ -1,6 +1,7 @@
 import TgBot from "./src/services/telegram";
 import {GetRows} from "./src/services/excelHandler";
 import {GetConfig} from "./src/services/config/config";
+import {handleRowsFromExcel, runOnTuesdayAndSaturday} from "./src/services/notifier/notifer";
 
 require('dotenv').config()
 
@@ -12,15 +13,11 @@ async function main() {
 
     const tgBot = new TgBot(config.TelegramToken)
 
-    tgBot.Run()
-
-    console.log('Bot is started')
-
-    const NotifyNow =  async () => {
+    const NotifyNow = async () => {
         await GetRows(config.SpreadSheetID, 'credentials.json').then((data) => {
             if (data != null) {
 
-                handleRowsFromExcel(data.data.values, tgBot)
+                handleRowsFromExcel(data.data.values, tgBot) // toDo: Need to parse this data and add it in database and then pull it from database until we have actual data. Now we pull it every time
 
             } else {
                 console.error('Here is nothing inside')
@@ -28,31 +25,15 @@ async function main() {
         })
     }
 
-    await LoopUntilItsTime(NotifyNow)
+    tgBot.SetNotifyCallback(NotifyNow)
+    tgBot.Run()
+
+    console.log('Bot is started')
+
+    await runOnTuesdayAndSaturday(NotifyNow) // idk weird of course, it needs to think about it
 }
 
 main()
 
- async function LoopUntilItsTime(NotifyNow: () => void ) {
-     while (true) {
-         await new Promise(r => setTimeout(r, 9000));
-         await NotifyNow()
-     }
- }
 
-function handleRowsFromExcel(names: string[][], bot: TgBot) {
-    for (let i = 1; i<names.length; i++) {
-        handleRow(names[i], bot)
-        console.log(`Handlind ${i}`)
-    }
-}
 
-function handleRow(row: string[], bot: TgBot) {
-    if(!isNaN(Date.parse(row[1]))) {
-        bot.SendMsg(`На пульте ${row[2]}. \n На первом микрофоне ${row[3]}. \nНа втором микрофоне ${row[4]}`).then((r) =>
-            console.log(r)
-        )
-    } else {
-        console.error(`DATAIS BROKEN${row[1]}`)
-    }
-}
