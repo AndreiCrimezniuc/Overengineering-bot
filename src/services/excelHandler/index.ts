@@ -30,7 +30,7 @@ async function GetRows(spreadsheetID: string, credentials: string): Promise<Gaxi
             spreadsheetId: spreadsheetID
         })
     } catch (e) {
-        console.error(e)
+        console.error('Request is dead'  + e)
         return null
     }
 

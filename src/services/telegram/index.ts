@@ -3,7 +3,7 @@ import TelegramBot from 'node-telegram-bot-api';
 class TgBot {
     private bot: TelegramBot
     private currentChatID: number
-    private notifyCallback: (() => void) | undefined
+    private notifyCallback: ((force: boolean) => void) | undefined
 
     constructor(token: string) {
         this.bot = new TelegramBot(token, {
@@ -12,7 +12,7 @@ class TgBot {
         this.currentChatID = 947727005 // default non-sense value
     }
 
-    public SetNotifyCallback(notify: () => void) {
+    public SetNotifyCallback(notify: (force: boolean) => void) {
         this.notifyCallback = notify
     }
 
@@ -31,7 +31,7 @@ class TgBot {
 
         this.bot.onText(/\/force/, (msg) => {
             console.log("trying to notify...")
-            this.notifyCallback ? this.notifyCallback() : this.SendMsg("there is no notify callback")
+            this.notifyCallback ? this.notifyCallback(true) : this.SendMsg("there is no notify callback")
         })
 
         this.bot.on('message', (msg) => {
