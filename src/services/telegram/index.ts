@@ -9,7 +9,7 @@ class TgBot {
         this.bot = new TelegramBot(token, {
             polling: true
         })
-        this.currentChatID = 947727005 // default non-sense value
+        this.currentChatID = 1001459090928 // default non-sense value
     }
 
     public SetNotifyCallback(notify: (force: boolean) => void) {
@@ -25,23 +25,10 @@ class TgBot {
     }
 
     private invokeEvents() {
-        this.bot.onText(/\/start/, (msg) => {
-            this.currentChatID = msg.chat.id
-        })
-
         this.bot.onText(/\/force/, (msg) => {
             console.log("trying to notify...")
             this.notifyCallback ? this.notifyCallback(true) : this.SendMsg("there is no notify callback", msg.chat.id)
         })
-
-        this.bot.on('message', (msg) => {
-            if (this.currentChatID === undefined) {
-                const chatId = msg.chat.id;
-                this.currentChatID = msg.chat.id
-                this.bot.sendMessage(chatId, `I'm listening you now ${this.currentChatID}`);
-            }
-        });
-
 
     }
 }
