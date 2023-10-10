@@ -1,7 +1,7 @@
-import TelegramBot from 'node-telegram-bot-api';
+const TelegramBot = require('node-telegram-bot-api');
 
 class TgBot {
-    private bot: TelegramBot
+    private bot: typeof TelegramBot
     private currentChatID: number
     private notifyCallback: ((force: boolean) => void) | undefined
 
@@ -20,7 +20,7 @@ class TgBot {
         this.invokeEvents()
     }
 
-    public SendMsg(text: string, chatID: number = this.currentChatID,): Promise<TelegramBot.Message> {
+    public SendMsg(text: string, chatID: number = this.currentChatID,): Promise<typeof TelegramBot.Message> {
         return this.bot.sendMessage(chatID, text, { parse_mode: 'HTML'});
     }
 
