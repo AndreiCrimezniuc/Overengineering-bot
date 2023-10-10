@@ -1,7 +1,7 @@
 import TgBot from "./src/services/telegram";
 import {GetRows} from "./src/services/excelHandler";
 import {GetConfig} from "./src/services/config/config";
-import {handleRowsFromExcel, runOnTuesdayAndSaturday} from "./src/services/notifier/notifer";
+import {GetRowsFromExcel, runOnTuesdayAndSaturday} from "./src/services/notifier/notifer";
 
 require('dotenv').config()
 
@@ -13,11 +13,11 @@ async function main() {
 
     const tgBot = new TgBot(config.TelegramToken)
 
-    const NotifyNow = async (force: boolean = false) => {
+    const NotifyNow = async (force: boolean = false, chatID: number) => {
         await GetRows(config.SpreadSheetID, 'credentials.json').then((data) => {
             if (data != null) {
                 console.log(data.data.values)
-                handleRowsFromExcel(data.data.values, tgBot, force) // toDo: Need to parse this data and add it in database and then pull it from database until we have actual data. Now we pull it every time
+                GetRowsFromExcel(data.data.values, tgBot, force) // toDo: Need to parse this data and add it in database and then pull it from database until we have actual data. Now we pull it every time
             } else {
                 console.error('Here is nothing inside')
             }

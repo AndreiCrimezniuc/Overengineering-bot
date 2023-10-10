@@ -2,14 +2,14 @@ const TelegramBot = require('node-telegram-bot-api');
 
 class TgBot {
     private bot: typeof TelegramBot
-    private currentChatID: number
+    private recurrentMainChatID: number
     private notifyCallback: ((force: boolean) => void) | undefined
 
     constructor(token: string) {
         this.bot = new TelegramBot(token, {
             polling: true
         })
-        this.currentChatID = 1001459090928 // default non-sense value
+        this.recurrentMainChatID = 0 // idk, it needs to be fixed
     }
 
     public SetNotifyCallback(notify: (force: boolean) => void) {
@@ -20,8 +20,8 @@ class TgBot {
         this.invokeEvents()
     }
 
-    public SendMsg(text: string, chatID: number = this.currentChatID,): Promise<typeof TelegramBot.Message> {
-        return this.bot.sendMessage(chatID, text, { parse_mode: 'HTML'});
+    public SendMsg(text: string, chatID: number = this.recurrentMainChatID,): Promise<typeof TelegramBot.Message> {
+        return this.bot.sendMessage(chatID, text, {parse_mode: 'HTML'});
     }
 
     private invokeEvents() {
@@ -30,6 +30,9 @@ class TgBot {
             this.notifyCallback ? this.notifyCallback(true) : this.SendMsg("there is no notify callback", msg.chat.id)
         })
 
+        this.bot.onText(/\/setChat/, (msg) => {
+            this.recurrentMainChatID = msg.chat.id
+        })
     }
 }
 

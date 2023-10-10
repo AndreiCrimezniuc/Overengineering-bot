@@ -2,7 +2,15 @@ import TgBot from "../telegram";
 
 const ROWS_IN_TABLE = 11
 
-export async function runOnTuesdayAndSaturday(NotifyNow: () => void) {
+type ServersRows = {
+    date: Date,
+    FirstMicrophone: string,
+    SecondMicrophone: string,
+    Sound: string,
+    SoundLearner: string
+}
+
+export async function runOnTuesdayAndSaturday(NotifyNow: (force: boolean = false) => void) {
     setInterval(() => {
         const now = new Date();
         const currentDay = now.getUTCDay();
@@ -21,7 +29,7 @@ export async function runOnTuesdayAndSaturday(NotifyNow: () => void) {
     }, 60000); // Check every minute
 }
 
-export function handleRowsFromExcel(rows: string[][], bot: TgBot, force: boolean) {
+export function GetRowsFromExcel(rows: string[][], bot: TgBot, force: boolean) {
     const namesToHandle = rows.length > ROWS_IN_TABLE ?  ROWS_IN_TABLE : rows.length
     for (let i = 1; i < namesToHandle; i++) {
         handleRow(rows[i], bot, force)
