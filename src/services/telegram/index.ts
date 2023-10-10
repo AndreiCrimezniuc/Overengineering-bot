@@ -31,7 +31,7 @@ class TgBot {
 
         this.bot.onText(/\/force/, (msg) => {
             console.log("trying to notify...")
-            this.notifyCallback ? this.notifyCallback(true) : this.SendMsg("there is no notify callback")
+            this.notifyCallback ? this.notifyCallback(true) : this.SendMsg("there is no notify callback", msg.chat.id)
         })
 
         this.bot.on('message', (msg) => {
