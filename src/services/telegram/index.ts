@@ -1,32 +1,48 @@
-import TelegramBot, {Message} from 'node-telegram-bot-api';
+import TelegramBot from 'node-telegram-bot-api';
 
 class TgBot {
     private bot: TelegramBot
+    private currentChatID: number
+    private notifyCallback: ((force: boolean) => void) | undefined
 
     constructor(token: string) {
         this.bot = new TelegramBot(token, {
             polling: true
         })
+        this.currentChatID = 947727005 // default non-sense value
+    }
+
+    public SetNotifyCallback(notify: (force: boolean) => void) {
+        this.notifyCallback = notify
     }
 
     public Run() {
         this.invokeEvents()
     }
 
+    public SendMsg(text: string, chatID: number = this.currentChatID,): Promise<TelegramBot.Message> {
+        return this.bot.sendMessage(chatID, text, { parse_mode: 'HTML'});
+    }
+
     private invokeEvents() {
-        this.bot.onText(/\/echo (.+)/, (msg: Message, match: RegExpMatchArray | null) => {
-            const chatId = msg.chat.id;
-            const resp = match ? match[1] : '';
-            this.bot.sendMessage(chatId, resp);
+        this.bot.onText(/\/start/, (msg) => {
+            this.currentChatID = msg.chat.id
+        })
+
+        this.bot.onText(/\/force/, (msg) => {
+            console.log("trying to notify...")
+            this.notifyCallback ? this.notifyCallback(true) : this.SendMsg("there is no notify callback", msg.chat.id)
+        })
+
+        this.bot.on('message', (msg) => {
+            if (this.currentChatID === undefined) {
+                const chatId = msg.chat.id;
+                this.currentChatID = msg.chat.id
+                this.bot.sendMessage(chatId, `I'm listening you now ${this.currentChatID}`);
+            }
         });
 
-        this.bot.on('message', (msg: Message) => {
-            const chatId = msg.chat.id;
-            const name = msg.from?.first_name || 'Unknown';
-            const lastname = msg.from?.last_name || 'Unknown';
 
-            this.bot.sendMessage(chatId, `Hello ${name} ${lastname}! How are you?`);
-        });
     }
 }
 

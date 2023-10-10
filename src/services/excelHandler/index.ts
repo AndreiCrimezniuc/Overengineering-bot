@@ -1,70 +1,78 @@
-const {google} = require('googleapis');
+import {google} from 'googleapis'
+import {GaxiosResponse} from "gaxios/build/src/common";
 
 interface SheetValues<T> {
     [row: string | number]: T[]
 }
 
-async function CreateClient() {
+async function CreateClient(credentials: string) {
     const auth = new google.auth.GoogleAuth({
-        keyFile: "credentials.json",
+        keyFile: credentials,
         scopes: "https://www.googleapis.com/auth/spreadsheets"
     });
 
     const client = await auth.getClient();
+    google.options(
+        {
+            auth: auth
+        }
+    )
 
-    return google.sheets({version: "v4", auth: client});
+    return google.sheets({version: "v4"});
 }
 
-async function GetNote(spreadsheetID: string) {
-    const client = await CreateClient();
+async function GetRows(spreadsheetID: string, credentials: string): Promise<GaxiosResponse | null> {
+    const client = await CreateClient(credentials);
+    console.log("Get Rows not is runned?")
 
     try {
-        const metaData = await client.spreadsheets.get({
-            spreadsheetID
-        });
-
-        const getRows = await client.spreadsheets.values.get({
-            spreadsheetID,
-            range: "List1"
+        const metaData = client.spreadsheets.get({
+            spreadsheetId: spreadsheetID
         })
-
-        return getRows.data;
-    } catch (error) {
-        console.error("Error retrieving spreadsheet data:", error);
-        //idk how to handle error in node. Seems like we need just throw and catch when call GetNote
+    } catch (e) {
+        console.error('Request is dead'  + e)
+        return null
     }
+
+    const rows = client.spreadsheets.values.get({
+        spreadsheetId: spreadsheetID,
+        range: "График распорядителей"
+    })
+
+    return rows
 }
 
-async function CreateNote(spreadsheetID: string, values: SheetValues<any>[]) {
-    const client = await CreateClient()
 
-    try {
-        const metaData = await client.spreadsheets.get({
-            spreadsheetID
-        });
+// async function CreateNote(spreadsheetID: string, values: SheetValues<any>[]) {
+//     const client = await CreateClient()
+//
+//     try {
+//         const metaData = await client.spreadsheets.get({
+//             spreadsheetID
+//         });
+//
+//         const getRows = await client.spreadsheets.values.get({
+//             spreadsheetID,
+//             range: "List1"
+//         })
+//
+//         await client.spreadsheets.values.append({
+//             spreadsheetID,
+//             range: "List1!A:B",
+//             valueInputOption: "USER_ENTERED", // Corrected value
+//             resource: {
+//                 values: values
+//             }
+//         });
+//
+//         return getRows.data;
+//     } catch (error) {
+//         console.error("Error retrieving spreadsheet data:", error);
+//         //idk how to handle error in node. Seems like we need just throw and catch when call GetNote
+//     }
+// }
 
-        const getRows = await client.spreadsheets.values.get({
-            spreadsheetID,
-            range: "List1"
-        })
-
-        await client.spreadsheets.values.append({
-            spreadsheetID,
-            range: "List1!A:B",
-            valueInputOption: "USER_ENTERED", // Corrected value
-            resource: {
-                values: values
-            }
-        });
-
-        return getRows.data;
-    } catch (error) {
-        console.error("Error retrieving spreadsheet data:", error);
-        //idk how to handle error in node. Seems like we need just throw and catch when call GetNote
-    }
-}
-
-export module.exports = {
-    CreateNote,
-    GetNote
+export {
+    // CreateNote,
+    GetRows
 }

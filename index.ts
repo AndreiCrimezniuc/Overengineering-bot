@@ -1,21 +1,38 @@
 import TgBot from "./src/services/telegram";
-const { CreateNote, GetNote } = require('./src/services/excelHandler');
+import {GetRows} from "./src/services/excelHandler";
+import {GetConfig} from "./src/services/config/config";
+import {handleRowsFromExcel, runOnTuesdayAndSaturday} from "./src/services/notifier/notifer";
 
 require('dotenv').config()
 
-function main() {
-    const tgToken =  process.env.TELEGRAM_TOKEN
-
-    if (tgToken === undefined) {
-        console.error("telegram token is not provided in .env")
+async function main() {
+    const config = GetConfig()
+    if (config === undefined) {
         process.exit(1)
     }
 
-    const tgBot = new TgBot(tgToken)
+    const tgBot = new TgBot(config.TelegramToken)
+
+    const NotifyNow = async (force: boolean = false) => {
+        await GetRows(config.SpreadSheetID, 'credentials.json').then((data) => {
+            if (data != null) {
+                console.log(data.data.values)
+                handleRowsFromExcel(data.data.values, tgBot, force) // toDo: Need to parse this data and add it in database and then pull it from database until we have actual data. Now we pull it every time
+            } else {
+                console.error('Here is nothing inside')
+            }
+        })
+    }
+
+    tgBot.SetNotifyCallback(NotifyNow)
     tgBot.Run()
 
-    const TestNote = GetNote('1btrFurxdm2LUVZIgwQZMhuS9ji7dpCZWheDM6UyiqK0')
-    console.log(TestNote)
+    console.log('Bot is started')
+
+    await runOnTuesdayAndSaturday(NotifyNow) // idk weird of course, it needs to think about it
 }
 
 main()
+
+
+
