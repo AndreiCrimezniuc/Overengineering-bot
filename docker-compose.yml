@@ -1,5 +1,18 @@
 version: '3.8'
 services:
+  ts-node-docker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./src:/home/node/app/src
+    container_name: ts-node-docker
+    expose:
+      - '4000'
+    ports:
+      - '4000:4000'
+    command: npm run dev
+
   db:
     image: postgres:15.3
     restart: always
@@ -13,3 +26,4 @@ services:
 volumes:
   db:
     driver: local
+
