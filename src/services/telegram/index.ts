@@ -30,7 +30,7 @@ class TgBot {
             this.notifyCallback ? this.notifyCallback(true) : this.SendMsg("there is no notify callback", msg.chat.id)
         })
 
-        this.bot.onText(/\/setChat/, (msg) => {
+        this.bot.onText(/\/set/, (msg) => {
             this.recurrentMainChatID = msg.chat.id
         })
     }

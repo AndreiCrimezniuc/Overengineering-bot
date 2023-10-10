@@ -22,5 +22,5 @@ credentials.json
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
-
+*.js
 .idea

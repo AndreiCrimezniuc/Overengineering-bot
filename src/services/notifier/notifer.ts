@@ -10,7 +10,7 @@ type ServersRows = {
     SoundLearner: string
 }
 
-export async function runOnTuesdayAndSaturday(NotifyNow: (force: boolean = false) => void) {
+export async function runOnTuesdayAndSaturday(NotifyNow: (force?: boolean) => void) {
     setInterval(() => {
         const now = new Date();
         const currentDay = now.getUTCDay();

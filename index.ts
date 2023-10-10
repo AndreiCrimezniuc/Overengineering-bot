@@ -13,7 +13,7 @@ async function main() {
 
     const tgBot = new TgBot(config.TelegramToken)
 
-    const NotifyNow = async (force: boolean = false, chatID: number) => {
+    const NotifyNow = async (force: boolean = false) => {
         await GetRows(config.SpreadSheetID, 'credentials.json').then((data) => {
             if (data != null) {
                 console.log(data.data.values)
