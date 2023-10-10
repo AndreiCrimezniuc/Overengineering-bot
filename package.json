@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.ts",
   "scripts": {
-    "dev": "env-cmd -f .env nodemon  index.ts",
+    "dev": "env-cmd -f .env nodemon index.ts",
     "start": "env-cmd -f .env node index.ts"
   },
   "author": "",
@@ -16,6 +16,7 @@
     "googleapis": "^126.0.1",
     "node-telegram-bot-api": "^0.61.0",
     "nodemon": "^3.0.1",
+    "ts-node": "^10.9.1",
     "tslib": "^2.6.2"
   },
   "devDependencies": {
