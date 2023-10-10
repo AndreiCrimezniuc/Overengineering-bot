@@ -1,29 +1,14 @@
-version: '3.8'
+version: '3'
 services:
-  ts-node-docker:
+  app:
     build:
       context: .
       dockerfile: Dockerfile
-    volumes:
-      - ./src:/home/node/app/src
-    container_name: ts-node-docker
-    expose:
-      - '4000'
     ports:
-      - '4000:4000'
-    command: npm run dev
-
-  db:
-    image: postgres:15.3
-    restart: always
+      - 3000:3000
+    volumes:
+      - .:/app
+    command: npm start
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-    ports:
-      - '5432:5432'
-    volumes:
-      - db:/var/lib/postgresql/data
-volumes:
-  db:
-    driver: local
+      - NODE_ENV=production
 

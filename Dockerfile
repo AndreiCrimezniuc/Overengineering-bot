@@ -1,14 +1,20 @@
+# Базовый образ Node.js
 FROM node:18
-# Create app directory
-WORKDIR /usr/src/app
-# Install app dependencies
-# A wildcard is used to ensure both package.json AND package-lock.json are copied
-# where available (npm@5+)
+
+# Установка рабочей директории внутри контейнера
+WORKDIR /app
+
+# Копирование package.json и package-lock.json для установки зависимостей
 COPY package*.json ./
-RUN npm install
-# If you are building your code for production
-RUN npm ci --omit=dev
-# Bundle app source
+
+# Установка зависимостей
+RUN npm install --production
+
+# Копирование всех файлов проекта в контейнер (кроме исключенных в .dockerignore)
 COPY . .
-EXPOSE 8080
-CMD [ "node", "server.js" ]
+
+# Открытие порта, который будет использоваться внутри контейнера
+EXPOSE 3000
+
+# Запуск команды для старта приложения
+CMD ["npm", "start"]

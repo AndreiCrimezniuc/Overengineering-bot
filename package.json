@@ -1,11 +1,11 @@
 {
-  "name": "src",
+  "name": "my-ts-app",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.ts",
+  "description": "My TypeScript Node.js app",
+  "main": "dist/index.js",
   "scripts": {
-    "dev": "env-cmd -f .env nodemon index.ts",
-    "start": "env-cmd -f .env node index.ts"
+    "build": "tsc",
+    "start": "node dist/index.js"
   },
   "author": "",
   "license": "ISC",
