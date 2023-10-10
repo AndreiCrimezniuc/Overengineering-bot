@@ -21,7 +21,7 @@ class TgBot {
     }
 
     public SendMsg(text: string, chatID: number = this.currentChatID,): Promise<TelegramBot.Message> {
-        return this.bot.sendMessage(chatID, text);
+        return this.bot.sendMessage(chatID, text, { parse_mode: 'HTML'});
     }
 
     private invokeEvents() {

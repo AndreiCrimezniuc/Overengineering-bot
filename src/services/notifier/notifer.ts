@@ -1,5 +1,7 @@
 import TgBot from "../telegram";
 
+const ROWS_IN_TABLE = 11
+
 export async function runOnTuesdayAndSaturday(NotifyNow: () => void) {
     setInterval(() => {
         const now = new Date();
@@ -19,10 +21,11 @@ export async function runOnTuesdayAndSaturday(NotifyNow: () => void) {
     }, 60000); // Check every minute
 }
 
-export function handleRowsFromExcel(names: string[][], bot: TgBot, force: boolean) {
-    for (let i = 1; i < names.length; i++) {
-        handleRow(names[i], bot, force)
-        console.log(`Handling ${names[i]}`)
+export function handleRowsFromExcel(rows: string[][], bot: TgBot, force: boolean) {
+    const namesToHandle = rows.length > ROWS_IN_TABLE ?  ROWS_IN_TABLE : rows.length
+    for (let i = 1; i < namesToHandle; i++) {
+        handleRow(rows[i], bot, force)
+        console.log(`Handling ${rows[i]}`)
     }
 }
 
@@ -38,15 +41,15 @@ function handleRow(row: string[], bot: TgBot, force: boolean) {
             console.log(`I saw row with not today date - IGNORED ${row[1]}`)
             return
         }
-
-        if (row[2] === undefined || row[3] === undefined || row[4] === undefined) {
+        console.log(row)
+        if (row[2] === undefined || row[3] === undefined || row[4] === undefined|| row[5] === undefined) {
             bot.SendMsg(`Привет. Я бот, но у меня что-то сломалось.Однако покажу что нашел в расписании: \n На аппаратуре послужит ${row[2]}. \n На первом микрофоне: ${row[3]}. \nНа втором микрофоне: ${row[4]}.
          Пожалуйста, предупреди,если у тебя нет такой возможности.`).then((r) =>
                 console.log(r)
             )
         } else {
-            bot.SendMsg(`Привет. Я бот на стажировке. Пока я еще не уверен в себе, но уже могу предупредить,что \n На аппаратуре послужит ${row[2]}. \n На первом микрофоне: ${row[3]}. \nНа втором микрофоне: ${row[4]}.
-         Пожалуйста, предупреди,если у тебя нет такой возможности.`).then((r) =>
+            bot.SendMsg(`Привет. Я бот на стажировке. Пока я еще не уверен в себе, но уже могу предупредить, что: \n <b>На аппаратуре:</b> ${row[2]} \n <b>На первом микрофоне:</b> ${row[3]} \n <b>На втором микрофоне:</b> ${row[4]} \n<b>Обучение за пультом: </b> ${row[5]}
+         \n Пожалуйста, предупреди,если у тебя нет такой возможности <b><i>заранее</i></b>.`).then((r) =>
                 console.log(r)
             )
         }
