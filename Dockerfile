@@ -5,13 +5,10 @@ FROM node:18
 WORKDIR /app
 
 # Копирование package.json и package-lock.json для установки зависимостей
-COPY package*.json ./
+COPY . .
 
 # Установка зависимостей
-RUN npm install --production
-
-# Копирование всех файлов проекта в контейнер (кроме исключенных в .dockerignore)
-COPY . .
+RUN npm install
 
 # Открытие порта, который будет использоваться внутри контейнера
 EXPOSE 3000
