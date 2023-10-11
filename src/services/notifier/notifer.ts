@@ -2,7 +2,15 @@ import TgBot from "../telegram";
 
 const ROWS_IN_TABLE = 11
 
-export async function runOnTuesdayAndSaturday(NotifyNow: () => void) {
+type ServersRows = {
+    date: Date,
+    FirstMicrophone: string,
+    SecondMicrophone: string,
+    Sound: string,
+    SoundLearner: string
+}
+
+export async function runOnTuesdayAndSaturday(NotifyNow: (force?: boolean) => void) {
     setInterval(() => {
         const now = new Date();
         const currentDay = now.getUTCDay();
@@ -21,7 +29,7 @@ export async function runOnTuesdayAndSaturday(NotifyNow: () => void) {
     }, 60000); // Check every minute
 }
 
-export function handleRowsFromExcel(rows: string[][], bot: TgBot, force: boolean) {
+export function GetRowsFromExcel(rows: string[][], bot: TgBot, force: boolean) {
     const namesToHandle = rows.length > ROWS_IN_TABLE ?  ROWS_IN_TABLE : rows.length
     for (let i = 1; i < namesToHandle; i++) {
         handleRow(rows[i], bot, force)
@@ -35,7 +43,7 @@ function isToday(row: string) {
     return DateFromString(row).toDateString() === today.toDateString();
 }
 
-function handleRow(row: string[], bot: TgBot, force: boolean) {
+function handleRow(row: string[], bot: TgBot, force: boolean) { // here is solid is dead. It should return object with audo stuff and sendMsg in another function(S-solid)
     if (!isNaN(Date.parse(row[1]))) { // nolint,please: the most ugly code that I every write
         if (!isToday(row[1]) && !(force && onThisWeek(DateFromString(row[1])))) {
             console.log(`I saw row with not today date - IGNORED ${row[1]}`)
