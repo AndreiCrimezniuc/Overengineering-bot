@@ -43,7 +43,7 @@ function isToday(row: string) {
     return DateFromString(row).toDateString() === today.toDateString();
 }
 
-function handleRow(row: string[], bot: TgBot, force: boolean) {
+function handleRow(row: string[], bot: TgBot, force: boolean) { // here is solid is dead. It should return object with audo stuff and sendMsg in another function(S-solid)
     if (!isNaN(Date.parse(row[1]))) { // nolint,please: the most ugly code that I every write
         if (!isToday(row[1]) && !(force && onThisWeek(DateFromString(row[1])))) {
             console.log(`I saw row with not today date - IGNORED ${row[1]}`)
