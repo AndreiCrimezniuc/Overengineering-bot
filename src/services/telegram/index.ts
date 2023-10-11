@@ -29,7 +29,6 @@ class TgBot { // toDo: add try catch for all requests
             console.log(`force schedule for ${msg.chat.id} ${msg.chat.first_name}`)
             this.currentChatID = msg.chat.id
             this.notifyCallback ? this.notifyCallback(true) : this.SendMsg("there is no notify callback", msg.chat.id)
-            this.currentChatID = 0
         })
 
         this.bot.onText(/\/set/, (msg) => {
