@@ -4,6 +4,7 @@ const TelegramBot = require('node-telegram-bot-api');
 class TgBot {
     constructor(token) {
         this.currentChatID = 0;
+        this.recurrentChatID = 0;
         this.bot = new TelegramBot(token, {
             polling: true
         });
@@ -15,7 +16,7 @@ class TgBot {
         this.invokeEvents();
     }
     SendMsg(text, chatID = this.currentChatID) {
-        console.log(`sending msg ${text} to chatID ${chatID}`);
+        console.log(`sending msg "${text.slice(0, 15)}..." to chatID ${chatID}`);
         return this.bot.sendMessage(chatID, text, { parse_mode: 'HTML' });
     }
     invokeEvents() {
@@ -25,9 +26,12 @@ class TgBot {
             this.notifyCallback ? this.notifyCallback(true) : this.SendMsg("there is no notify callback", msg.chat.id);
         });
         this.bot.onText(/\/set/, (msg) => {
-            console.log(`set chatID ${msg.chat.id}`);
-            this.currentChatID = msg.chat.id;
+            console.log(`set recurrent chatID ${msg.chat.id}`);
+            this.recurrentChatID = msg.chat.id;
         });
+    }
+    GetRecurrentChatID() {
+        return this.recurrentChatID;
     }
 }
 exports.default = TgBot;
