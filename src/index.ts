@@ -1,7 +1,7 @@
-import TgBot from "./src/services/telegram";
-import {GetRows} from "./src/services/excelHandler";
-import {GetConfig} from "./src/services/config/config";
-import {GetRowsFromExcel, runOnTuesdayAndSaturday} from "./src/services/notifier/notifer";
+import TgBot from "./services/telegram";
+import {GetRows} from "./services/excelHandler";
+import {GetConfig} from "./services/config/config";
+import {GetRowsFromExcel, runOnTuesdayAndSaturday} from "./services/notifier/notifer";
 
 require('dotenv').config()
 

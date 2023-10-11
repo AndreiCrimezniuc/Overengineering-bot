@@ -4,9 +4,10 @@
   "description": "My TypeScript Node.js app",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "ts-node index.ts",
+    "dev": "ts-node src/index.ts",
     "start": "node dist/index.js",
-    "build": "tsc"
+    "build": "tsc",
+    "prod": "tsc && ls dist && node dist/src/index.js"
   },
   "author": "",
   "license": "ISC",
