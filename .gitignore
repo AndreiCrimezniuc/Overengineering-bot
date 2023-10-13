@@ -1,8 +1,8 @@
-# Logs
 logs
 *.log
 
 coverage
+.idea
 
 # Compiled binary addons (https://nodejs.org/api/addons.html)
 build/Release
@@ -17,5 +17,3 @@ jspm_packages/
 credentials.json
 
 .pnp.*
-
-.idea

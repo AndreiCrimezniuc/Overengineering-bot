@@ -12,11 +12,11 @@ async function main() {
         process.exit(1);
     }
     const tgBot = new telegram_1.default(config.TelegramToken);
-    const NotifyNow = async (force = false) => {
+    const NotifyNow = async (force = false, chatID) => {
         await (0, excelHandler_1.GetRows)(config.SpreadSheetID, 'credentials.json').then((data) => {
             if (data != null) {
-                console.log(data.data.values);
-                (0, notifer_1.GetRowsFromExcel)(data.data.values, tgBot, force);
+                let rows = (0, notifer_1.GetRowsFromExcel)(data.data.values, tgBot, force);
+                (0, notifer_1.sendNotification)(rows, tgBot, chatID);
             }
             else {
                 console.error('Here is nothing inside');
@@ -26,7 +26,7 @@ async function main() {
     tgBot.SetNotifyCallback(NotifyNow);
     tgBot.Run();
     console.log('Bot is started');
-    await (0, notifer_1.runOnTuesdayAndSaturday)(NotifyNow);
+    await (0, notifer_1.runOnTuesdayAndSaturday)(NotifyNow, tgBot);
 }
 main();
 //# sourceMappingURL=index.js.map

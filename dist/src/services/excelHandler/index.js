@@ -15,7 +15,6 @@ async function CreateClient(credentials) {
 }
 async function GetRows(spreadsheetID, credentials) {
     const client = await CreateClient(credentials);
-    console.log("Get Rows not is runned?");
     try {
         const metaData = client.spreadsheets.get({
             spreadsheetId: spreadsheetID
