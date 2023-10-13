@@ -4,7 +4,7 @@ class TgBot { // toDo: add try catch for all requests
     private bot: typeof TelegramBot
     private notifyCallback: ((force: boolean) => void) | undefined
     private currentChatID: number = 0 // lame way to avoid handleRow weird move
-    private recurrentChatID: number = 0
+    private recurrentChatID: number = 1001459090928
 
     constructor(token: string) {
         this.bot = new TelegramBot(token, {

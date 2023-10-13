@@ -26,7 +26,7 @@ export async function runOnTuesdayAndSaturday(NotifyNow: (force?: boolean, chatI
         if (currentDay === 6 && currentHour === 8 && currentMinute === 0) {
             NotifyNow(false, bot.GetRecurrentChatID());
         }
-    }, 6000); // Check every minute
+    }, 60000); // Check every minute
 }
 
 export function GetRowsFromExcel(rows: string[][], bot: TgBot, force: boolean) {
@@ -72,7 +72,6 @@ function handleRow(row: string[], bot: TgBot, force: boolean): ServersRows | und
             console.log(`I saw row with not today date - IGNORED ${row[1]}`)
             return undefined
         }
-
         return {
             date: new Date(row[1]),
             Sound: row[2],
@@ -100,5 +99,5 @@ function getWeekNumber(date: Date): number {
 function DateFromString(date: string): Date {
     const rowDateArray = date.split('.')
 
-    return new Date(Number(rowDateArray[2]), Number(rowDateArray[1]), Number(rowDateArray[0]))
+    return new Date(Number(rowDateArray[2]), Number(rowDateArray[1]) -1, Number(rowDateArray[0]))
 }

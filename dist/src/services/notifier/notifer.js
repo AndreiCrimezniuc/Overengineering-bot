@@ -14,7 +14,7 @@ async function runOnTuesdayAndSaturday(NotifyNow, bot) {
         if (currentDay === 6 && currentHour === 8 && currentMinute === 0) {
             NotifyNow(false, bot.GetRecurrentChatID());
         }
-    }, 6000);
+    }, 60000);
 }
 exports.runOnTuesdayAndSaturday = runOnTuesdayAndSaturday;
 function GetRowsFromExcel(rows, bot, force) {
@@ -73,6 +73,6 @@ function getWeekNumber(date) {
 }
 function DateFromString(date) {
     const rowDateArray = date.split('.');
-    return new Date(Number(rowDateArray[2]), Number(rowDateArray[1]), Number(rowDateArray[0]));
+    return new Date(Number(rowDateArray[2]), Number(rowDateArray[1]) - 1, Number(rowDateArray[0]));
 }
 //# sourceMappingURL=notifer.js.map
