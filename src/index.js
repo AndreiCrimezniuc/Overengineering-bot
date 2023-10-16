@@ -36,53 +36,54 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GetRows = void 0;
-var googleapis_1 = require("googleapis");
-function CreateClient(credentials) {
+var telegram_1 = require("./services/telegram");
+var excelHandler_1 = require("./services/excelHandler");
+var config_1 = require("./services/config/config");
+var notifer_1 = require("./services/notifier/notifer");
+var logger_1 = require("./services/logger/logger");
+require('dotenv').config();
+function main() {
     return __awaiter(this, void 0, void 0, function () {
-        var auth, client;
+        var config, tgBot, NotifyNow;
+        var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    auth = new googleapis_1.google.auth.GoogleAuth({
-                        keyFile: credentials,
-                        scopes: "https://www.googleapis.com/auth/spreadsheets"
-                    });
-                    return [4 /*yield*/, auth.getClient()];
-                case 1:
-                    client = _a.sent();
-                    googleapis_1.google.options({
-                        auth: auth
-                    });
-                    return [2 /*return*/, googleapis_1.google.sheets({ version: "v4" })];
-            }
-        });
-    });
-}
-function GetRows(spreadsheetID, credentials) {
-    return __awaiter(this, void 0, void 0, function () {
-        var client, metaData, rows;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0: return [4 /*yield*/, CreateClient(credentials)];
-                case 1:
-                    client = _a.sent();
-                    try {
-                        metaData = client.spreadsheets.get({
-                            spreadsheetId: spreadsheetID
+                    config = (0, config_1.GetConfig)();
+                    if (config === undefined) {
+                        process.exit(1);
+                    }
+                    tgBot = new telegram_1.default(config.TelegramToken);
+                    NotifyNow = function (force, chatID) {
+                        if (force === void 0) { force = false; }
+                        return __awaiter(_this, void 0, void 0, function () {
+                            return __generator(this, function (_a) {
+                                switch (_a.label) {
+                                    case 0: return [4 /*yield*/, (0, excelHandler_1.GetRows)(config.SpreadSheetID, 'credentials.json').then(function (data) {
+                                            if (data != null) {
+                                                var rows = (0, notifer_1.GetRowsFromExcel)(data.data.values, tgBot, force); // toDo: Need to parse this data and add it in database and then pull it from database until we have actual data. Now we pull it every time
+                                                (0, notifer_1.sendNotification)(rows, tgBot, chatID);
+                                            }
+                                            else {
+                                                logger_1.default.info('Here is nothing inside');
+                                            }
+                                        })];
+                                    case 1:
+                                        _a.sent();
+                                        return [2 /*return*/];
+                                }
+                            });
                         });
-                    }
-                    catch (e) {
-                        console.error('Request is dead' + e);
-                        return [2 /*return*/, null];
-                    }
-                    rows = client.spreadsheets.values.get({
-                        spreadsheetId: spreadsheetID,
-                        range: "График распорядителей"
-                    });
-                    return [2 /*return*/, rows];
+                    };
+                    tgBot.SetNotifyCallback(NotifyNow);
+                    tgBot.Run();
+                    logger_1.default.info('Bot is started');
+                    return [4 /*yield*/, (0, notifer_1.runOnTuesdayAndSaturday)(NotifyNow, tgBot)]; //IDK weird of course, it needs to think about it
+                case 1:
+                    _a.sent(); //IDK weird of course, it needs to think about it
+                    return [2 /*return*/];
             }
         });
     });
 }
-exports.GetRows = GetRows;
+main();

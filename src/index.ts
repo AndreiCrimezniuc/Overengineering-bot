@@ -2,6 +2,7 @@ import TgBot from "./services/telegram";
 import {GetRows} from "./services/excelHandler";
 import {GetConfig} from "./services/config/config";
 import {GetRowsFromExcel, runOnTuesdayAndSaturday, sendNotification} from "./services/notifier/notifer";
+import logger from "./services/logger/logger";
 
 require('dotenv').config()
 
@@ -19,7 +20,7 @@ async function main() {
                 let rows = GetRowsFromExcel(data.data.values, tgBot, force) // toDo: Need to parse this data and add it in database and then pull it from database until we have actual data. Now we pull it every time
                 sendNotification(rows, tgBot, chatID)
             } else {
-                console.error('Here is nothing inside')
+                logger.info('Here is nothing inside')
             }
         })
     }
@@ -27,12 +28,10 @@ async function main() {
     tgBot.SetNotifyCallback(NotifyNow)
     tgBot.Run()
 
-    console.log('Bot is started')
+    logger.info('Bot is started')
 
     await runOnTuesdayAndSaturday(NotifyNow, tgBot)  //IDK weird of course, it needs to think about it
 }
 
 main()
-
-
 

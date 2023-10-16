@@ -1,12 +1,15 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-var node_telegram_bot_api_1 = require("node-telegram-bot-api");
+var logger_1 = require("../logger/logger");
+var TelegramBot = require('node-telegram-bot-api');
 var TgBot = /** @class */ (function () {
     function TgBot(token) {
-        this.bot = new node_telegram_bot_api_1.default(token, {
+        this.currentChatID = 0; // lame way to avoid handleRow weird move
+        this.recurrentChatID = 1001459090928; //1001459090928
+        this.bot = new TelegramBot(token, {
             polling: true
         });
-        this.currentChatID = 947727005; // default non-sense value
+        this.logger = logger_1.default;
     }
     TgBot.prototype.SetNotifyCallback = function (notify) {
         this.notifyCallback = notify;
@@ -16,24 +19,23 @@ var TgBot = /** @class */ (function () {
     };
     TgBot.prototype.SendMsg = function (text, chatID) {
         if (chatID === void 0) { chatID = this.currentChatID; }
-        return this.bot.sendMessage(chatID, text);
+        this.logger.info("sending msg \"".concat(text.slice(0, 15), "...\" to chatID ").concat(chatID));
+        return this.bot.sendMessage(chatID, text, { parse_mode: 'HTML' });
     };
     TgBot.prototype.invokeEvents = function () {
         var _this = this;
-        this.bot.onText(/\/start/, function (msg) {
-            _this.currentChatID = msg.chat.id;
-        });
         this.bot.onText(/\/force/, function (msg) {
-            console.log("trying to notify...");
-            _this.notifyCallback ? _this.notifyCallback() : _this.SendMsg("there is no notify callback");
+            _this.logger.info("force schedule for id:".concat(msg.chat.id, " fistName:").concat(msg.chat.first_name));
+            _this.currentChatID = msg.chat.id;
+            _this.notifyCallback ? _this.notifyCallback(true) : _this.SendMsg("there is no notify callback", msg.chat.id);
         });
-        this.bot.on('message', function (msg) {
-            if (_this.currentChatID === undefined) {
-                var chatId = msg.chat.id;
-                _this.currentChatID = msg.chat.id;
-                _this.bot.sendMessage(chatId, "I'm listening you now ".concat(_this.currentChatID));
-            }
+        this.bot.onText(/\/set/, function (msg) {
+            _this.logger.info("set recurrent chatID ".concat(msg.chat.id));
+            _this.recurrentChatID = msg.chat.id;
         });
+    };
+    TgBot.prototype.GetRecurrentChatID = function () {
+        return this.recurrentChatID;
     };
     return TgBot;
 }());

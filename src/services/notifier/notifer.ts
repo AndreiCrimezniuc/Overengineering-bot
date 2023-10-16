@@ -1,9 +1,11 @@
 import TgBot from "../telegram";
+import logger from "../logger/logger";
+import moment from "moment";
 
 const ROWS_IN_TABLE = 11
 
 type ServersRows = {
-    date: Date,
+    date: moment.Moment,
     FirstMicrophone: string,
     SecondMicrophone: string,
     Sound: string,
@@ -14,18 +16,22 @@ export async function runOnTuesdayAndSaturday(NotifyNow: (force?: boolean, chatI
     setInterval(() => {
         const now = new Date();
         const currentDay = now.getUTCDay();
-        const currentHour = now.getUTCHours();
+        const currentHour = now.getHours();
         const currentMinute = now.getUTCMinutes();
+        const logWrongTime = () => {
+            logger.warn(`Hm. Skipped recurrent task. Now is just day-${currentDay}, hour-${currentHour} and minutes-${currentMinute}`)
+        }
+
+        const isSaturdayEightAM = currentDay === 6 && currentHour === 8 && currentMinute === 0
+        const isTuesdayEightAM = currentDay === 2 && currentHour === 8 && currentMinute === 0
 
         // Check if it's Tuesday and the time is 8:00
-        if (currentDay === 2 && currentHour === 8 && currentMinute === 0) {
+        if (isSaturdayEightAM || isTuesdayEightAM) {
             NotifyNow(false, bot.GetRecurrentChatID())
+        } else {
+            logWrongTime()
         }
 
-        // Check if it's Saturday and the time is 8:00
-        if (currentDay === 6 && currentHour === 8 && currentMinute === 0) {
-            NotifyNow(false, bot.GetRecurrentChatID());
-        }
     }, 60000); // Check every minute
 }
 
@@ -33,71 +39,64 @@ export function GetRowsFromExcel(rows: string[][], bot: TgBot, force: boolean) {
     let resultRows: ServersRows[] = []
 
     const namesToHandle = rows.length > ROWS_IN_TABLE ? ROWS_IN_TABLE : rows.length
-
     for (let i = 1; i < namesToHandle; i++) {
         let rowObj = handleRow(rows[i], bot, force)
-        rowObj ? resultRows.push(rowObj) : console.log("found broken raw")
+        if (rowObj !== undefined) {
+            resultRows.push(rowObj)
+        }
     }
 
     return resultRows
 }
 
-function isToday(row: string) {
-    const today = new Date()
+function isToday(date: moment.Moment) {
+    const today = moment()
 
-    return DateFromString(row).toDateString() === today.toDateString();
+    return today.day() == date.day()
 }
 
 export function sendNotification(servers: ServersRows[], bot: TgBot, chatID?: number) {
     servers.forEach((el) => {
         if (el.SoundLearner === undefined || el.Sound === undefined || el.FirstMicrophone === undefined || el.SecondMicrophone === undefined) {
-            bot.SendMsg(`Привет. Я бот, но у меня что-то сломалось.Однако покажу что нашел в расписании: \n На аппаратуре послужит ${el.Sound}. \n На первом микрофоне: ${el.FirstMicrophone}. \nНа втором микрофоне: ${el.SecondMicrophone}.
+           bot.SendMsg(`Привет. Я бот, но у меня что-то сломалось.Однако покажу что нашел в расписании: \n На аппаратуре послужит ${el.Sound}. \n На первом микрофоне: ${el.FirstMicrophone}. \nНа втором микрофоне: ${el.SecondMicrophone}.
          Пожалуйста, предупреди,если у тебя нет такой возможности.`, chatID).then((r) =>
-                console.log(r)
+                logger.info(r)
             )
         } else {
-            bot.SendMsg(`Привет. Я бот на стажировке. Пока я еще не уверен в себе, но уже могу предупредить, что: \n <b>На аппаратуре:</b> ${el.Sound} \n <b>На первом микрофоне:</b> ${el.FirstMicrophone} \n <b>На втором микрофоне:</b> ${el.SecondMicrophone} \n<b>Обучение за пультом: </b> ${el.SoundLearner}
-         \n Пожалуйста, предупреди,если у тебя нет такой возможности <b><i>заранее</i></b>.`, chatID).then((r) =>
-                console.log(r)
+            let msg = `Привет. Я бот на стажировке. Пока я еще не уверен в себе, но уже могу предупредить, что: \n <b>На аппаратуре:</b> ${el.Sound} \n <b>На первом микрофоне:</b> ${el.FirstMicrophone} \n <b>На втором микрофоне:</b> ${el.SecondMicrophone} \n<b>Обучение за пультом: </b> ${el.SoundLearner}
+         \n Пожалуйста, предупреди,если у тебя нет такой возможности <b><i>заранее</i></b>.`
+
+            bot.SendMsg(msg, chatID).then((r) =>
+                logger.info(r + ` send msg "${msg.substring(0, 10)}..." for ${chatID}`)
             )
         }
     })
 }
 
 function handleRow(row: string[], bot: TgBot, force: boolean): ServersRows | undefined { // here is solid is dead. It should return object with audo stuff and sendMsg in another function(S-solid)
-    const date = Date.parse(row[1]);
+    const date = moment(row[1], "DD-MM-YYYY")
 
-    if (!isNaN(date)) { // nolint,please: the most ugly code that I every write
-        if (!isToday(row[1]) && !(force && onThisWeek(DateFromString(row[1])))) {
-            console.log(`I saw row with not today date - IGNORED ${row[1]}`)
-            return undefined
+    if (date.isValid()) { // nolint,please: the most ugly code that I every write
+        if (isToday(date) || (force && onThisWeek(date))) {
+            logger.info("Got correct schedule for current week")
+            return {
+                date: date,
+                Sound: row[2],
+                FirstMicrophone: row[3],
+                SecondMicrophone: row[4],
+                SoundLearner: row[5]
+            }
         }
-        return {
-            date: new Date(row[1]),
-            Sound: row[2],
-            FirstMicrophone: row[3],
-            SecondMicrophone: row[4],
-            SoundLearner: row[5]
-        }
+        logger.warn(`Got schedule for other date: ${row[1]}`)
+
+        return undefined
+    } else {
+        console.log(`Weird date ${row[1]}`)
     }
 }
 
-function onThisWeek(date: Date): boolean {
-    const today = new Date();
-    const currentWeek = getWeekNumber(today);
-    const weekToCheck = getWeekNumber(date);
+function onThisWeek(date: moment.Moment): boolean {
+    const today = moment()
 
-    return currentWeek === weekToCheck;
-}
-
-function getWeekNumber(date: Date): number {
-    const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
-    const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
-    return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
-}
-
-function DateFromString(date: string): Date {
-    const rowDateArray = date.split('.')
-
-    return new Date(Number(rowDateArray[2]), Number(rowDateArray[1]) -1, Number(rowDateArray[0]))
+    return date.week() == today.week()
 }

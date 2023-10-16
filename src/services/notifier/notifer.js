@@ -36,22 +36,29 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.handleRowsFromExcel = exports.runOnTuesdayAndSaturday = void 0;
-function runOnTuesdayAndSaturday(NotifyNow) {
+exports.sendNotification = exports.GetRowsFromExcel = exports.runOnTuesdayAndSaturday = void 0;
+var logger_1 = require("../logger/logger");
+var moment_1 = require("moment");
+var ROWS_IN_TABLE = 11;
+function runOnTuesdayAndSaturday(NotifyNow, bot) {
     return __awaiter(this, void 0, void 0, function () {
         return __generator(this, function (_a) {
             setInterval(function () {
                 var now = new Date();
                 var currentDay = now.getUTCDay();
-                var currentHour = now.getUTCHours();
+                var currentHour = now.getHours();
                 var currentMinute = now.getUTCMinutes();
+                var logWrongTime = function () {
+                    logger_1.default.warn("Hm. Skipped recurrent task. Now is just day-".concat(currentDay, ", hour-").concat(currentHour, " and minutes-").concat(currentMinute));
+                };
+                var isSaturdayEightAM = currentDay === 6 && currentHour === 8 && currentMinute === 0;
+                var isTuesdayEightAM = currentDay === 2 && currentHour === 8 && currentMinute === 0;
                 // Check if it's Tuesday and the time is 8:00
-                if (currentDay === 2 && currentHour === 8 && currentMinute === 0) {
-                    NotifyNow();
+                if (isSaturdayEightAM || isTuesdayEightAM) {
+                    NotifyNow(false, bot.GetRecurrentChatID());
                 }
-                // Check if it's Saturday and the time is 8:00
-                if (currentDay === 6 && currentHour === 8 && currentMinute === 0) {
-                    NotifyNow();
+                else {
+                    logWrongTime();
                 }
             }, 60000); // Check every minute
             return [2 /*return*/];
@@ -59,24 +66,59 @@ function runOnTuesdayAndSaturday(NotifyNow) {
     });
 }
 exports.runOnTuesdayAndSaturday = runOnTuesdayAndSaturday;
-function handleRowsFromExcel(names, bot) {
-    console.log("file is ".concat(names));
-    for (var i = 1; i < names.length; i++) {
-        handleRow(names[i], bot);
+function GetRowsFromExcel(rows, bot, force) {
+    var resultRows = [];
+    var namesToHandle = rows.length > ROWS_IN_TABLE ? ROWS_IN_TABLE : rows.length;
+    for (var i = 1; i < namesToHandle; i++) {
+        var rowObj = handleRow(rows[i], bot, force);
+        if (rowObj !== undefined) {
+            resultRows.push(rowObj);
+        }
     }
+    return resultRows;
 }
-exports.handleRowsFromExcel = handleRowsFromExcel;
-function handleRow(row, bot) {
-    if (!isNaN(Date.parse(row[1]))) {
-        if (row[2] === undefined || row[3] === undefined || row[4] === undefined) {
-            bot.SendMsg("\u041F\u0440\u0438\u0432\u0435\u0442. \u042F \u0431\u043E\u0442, \u043D\u043E \u0443 \u043C\u0435\u043D\u044F \u0447\u0442\u043E-\u0442\u043E \u0441\u043B\u043E\u043C\u0430\u043B\u043E\u0441\u044C.\u041E\u0434\u043D\u0430\u043A\u043E \u043F\u043E\u043A\u0430\u0436\u0443 \u0447\u0442\u043E \u043D\u0430\u0448\u0435\u043B \u0432 \u0440\u0430\u0441\u043F\u0438\u0441\u0430\u043D\u0438\u0438: \n \u041D\u0430 \u0430\u043F\u043F\u0430\u0440\u0430\u0442\u0443\u0440\u0435 \u043F\u043E\u0441\u043B\u0443\u0436\u0438\u0442 ".concat(row[2], ". \n \u041D\u0430 \u043F\u0435\u0440\u0432\u043E\u043C \u043C\u0438\u043A\u0440\u043E\u0444\u043E\u043D\u0435: ").concat(row[3], ". \n\u041D\u0430 \u0432\u0442\u043E\u0440\u043E\u043C \u043C\u0438\u043A\u0440\u043E\u0444\u043E\u043D\u0435: ").concat(row[4], ".\n         \u041F\u043E\u0436\u0430\u043B\u0443\u0439\u0441\u0442\u0430, \u043F\u0440\u0435\u0434\u0443\u043F\u0440\u0435\u0434\u0438,\u0435\u0441\u043B\u0438 \u0443 \u0442\u0435\u0431\u044F \u043D\u0435\u0442 \u0442\u0430\u043A\u043E\u0439 \u0432\u043E\u0437\u043C\u043E\u0436\u043D\u043E\u0441\u0442\u0438.")).then(function (r) {
-                return console.log(r);
+exports.GetRowsFromExcel = GetRowsFromExcel;
+function isToday(date) {
+    var today = (0, moment_1.default)();
+    return today.day() == date.day();
+}
+function sendNotification(servers, bot, chatID) {
+    servers.forEach(function (el) {
+        if (el.SoundLearner === undefined || el.Sound === undefined || el.FirstMicrophone === undefined || el.SecondMicrophone === undefined) {
+            bot.SendMsg("\u041F\u0440\u0438\u0432\u0435\u0442. \u042F \u0431\u043E\u0442, \u043D\u043E \u0443 \u043C\u0435\u043D\u044F \u0447\u0442\u043E-\u0442\u043E \u0441\u043B\u043E\u043C\u0430\u043B\u043E\u0441\u044C.\u041E\u0434\u043D\u0430\u043A\u043E \u043F\u043E\u043A\u0430\u0436\u0443 \u0447\u0442\u043E \u043D\u0430\u0448\u0435\u043B \u0432 \u0440\u0430\u0441\u043F\u0438\u0441\u0430\u043D\u0438\u0438: \n \u041D\u0430 \u0430\u043F\u043F\u0430\u0440\u0430\u0442\u0443\u0440\u0435 \u043F\u043E\u0441\u043B\u0443\u0436\u0438\u0442 ".concat(el.Sound, ". \n \u041D\u0430 \u043F\u0435\u0440\u0432\u043E\u043C \u043C\u0438\u043A\u0440\u043E\u0444\u043E\u043D\u0435: ").concat(el.FirstMicrophone, ". \n\u041D\u0430 \u0432\u0442\u043E\u0440\u043E\u043C \u043C\u0438\u043A\u0440\u043E\u0444\u043E\u043D\u0435: ").concat(el.SecondMicrophone, ".\n         \u041F\u043E\u0436\u0430\u043B\u0443\u0439\u0441\u0442\u0430, \u043F\u0440\u0435\u0434\u0443\u043F\u0440\u0435\u0434\u0438,\u0435\u0441\u043B\u0438 \u0443 \u0442\u0435\u0431\u044F \u043D\u0435\u0442 \u0442\u0430\u043A\u043E\u0439 \u0432\u043E\u0437\u043C\u043E\u0436\u043D\u043E\u0441\u0442\u0438."), chatID).then(function (r) {
+                return logger_1.default.info(r);
             });
         }
         else {
-            bot.SendMsg("\u041F\u0440\u0438\u0432\u0435\u0442. \u042F \u0431\u043E\u0442 \u043D\u0430 \u0441\u0442\u0430\u0436\u0438\u0440\u043E\u0432\u043A\u0435. \u041F\u043E\u043A\u0430 \u044F \u0435\u0449\u0435 \u043D\u0435 \u0443\u0432\u0435\u0440\u0435\u043D \u0432 \u0441\u0435\u0431\u0435, \u043D\u043E \u0443\u0436\u0435 \u043C\u043E\u0433\u0443 \u043F\u0440\u0435\u0434\u0443\u043F\u0440\u0435\u0434\u0438\u0442\u044C,\u0447\u0442\u043E \n \u041D\u0430 \u0430\u043F\u043F\u0430\u0440\u0430\u0442\u0443\u0440\u0435 \u043F\u043E\u0441\u043B\u0443\u0436\u0438\u0442 ".concat(row[2], ". \n \u041D\u0430 \u043F\u0435\u0440\u0432\u043E\u043C \u043C\u0438\u043A\u0440\u043E\u0444\u043E\u043D\u0435: ").concat(row[3], ". \n\u041D\u0430 \u0432\u0442\u043E\u0440\u043E\u043C \u043C\u0438\u043A\u0440\u043E\u0444\u043E\u043D\u0435: ").concat(row[4], ".\n         \u041F\u043E\u0436\u0430\u043B\u0443\u0439\u0441\u0442\u0430, \u043F\u0440\u0435\u0434\u0443\u043F\u0440\u0435\u0434\u0438,\u0435\u0441\u043B\u0438 \u0443 \u0442\u0435\u0431\u044F \u043D\u0435\u0442 \u0442\u0430\u043A\u043E\u0439 \u0432\u043E\u0437\u043C\u043E\u0436\u043D\u043E\u0441\u0442\u0438.")).then(function (r) {
-                return console.log(r);
+            var msg_1 = "\u041F\u0440\u0438\u0432\u0435\u0442. \u042F \u0431\u043E\u0442 \u043D\u0430 \u0441\u0442\u0430\u0436\u0438\u0440\u043E\u0432\u043A\u0435. \u041F\u043E\u043A\u0430 \u044F \u0435\u0449\u0435 \u043D\u0435 \u0443\u0432\u0435\u0440\u0435\u043D \u0432 \u0441\u0435\u0431\u0435, \u043D\u043E \u0443\u0436\u0435 \u043C\u043E\u0433\u0443 \u043F\u0440\u0435\u0434\u0443\u043F\u0440\u0435\u0434\u0438\u0442\u044C, \u0447\u0442\u043E: \n <b>\u041D\u0430 \u0430\u043F\u043F\u0430\u0440\u0430\u0442\u0443\u0440\u0435:</b> ".concat(el.Sound, " \n <b>\u041D\u0430 \u043F\u0435\u0440\u0432\u043E\u043C \u043C\u0438\u043A\u0440\u043E\u0444\u043E\u043D\u0435:</b> ").concat(el.FirstMicrophone, " \n <b>\u041D\u0430 \u0432\u0442\u043E\u0440\u043E\u043C \u043C\u0438\u043A\u0440\u043E\u0444\u043E\u043D\u0435:</b> ").concat(el.SecondMicrophone, " \n<b>\u041E\u0431\u0443\u0447\u0435\u043D\u0438\u0435 \u0437\u0430 \u043F\u0443\u043B\u044C\u0442\u043E\u043C: </b> ").concat(el.SoundLearner, "\n         \n \u041F\u043E\u0436\u0430\u043B\u0443\u0439\u0441\u0442\u0430, \u043F\u0440\u0435\u0434\u0443\u043F\u0440\u0435\u0434\u0438,\u0435\u0441\u043B\u0438 \u0443 \u0442\u0435\u0431\u044F \u043D\u0435\u0442 \u0442\u0430\u043A\u043E\u0439 \u0432\u043E\u0437\u043C\u043E\u0436\u043D\u043E\u0441\u0442\u0438 <b><i>\u0437\u0430\u0440\u0430\u043D\u0435\u0435</i></b>.");
+            bot.SendMsg(msg_1, chatID).then(function (r) {
+                return logger_1.default.info(r + " send msg \"".concat(msg_1.substring(0, 10), "...\" for ").concat(chatID));
             });
         }
+    });
+}
+exports.sendNotification = sendNotification;
+function handleRow(row, bot, force) {
+    var date = (0, moment_1.default)(row[1], "DD-MM-YYYY");
+    if (date.isValid()) { // nolint,please: the most ugly code that I every write
+        if (isToday(date) || (force && onThisWeek(date))) {
+            logger_1.default.info("Got correct schedule for current week");
+            return {
+                date: date,
+                Sound: row[2],
+                FirstMicrophone: row[3],
+                SecondMicrophone: row[4],
+                SoundLearner: row[5]
+            };
+        }
+        logger_1.default.warn("Got schedule for other date: ".concat(row[1]));
+        return undefined;
     }
+    else {
+        console.log("Weird date ".concat(row[1]));
+    }
+}
+function onThisWeek(date) {
+    var today = (0, moment_1.default)();
+    return date.week() == today.week();
 }

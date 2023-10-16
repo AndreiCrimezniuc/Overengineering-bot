@@ -5,6 +5,7 @@ const telegram_1 = tslib_1.__importDefault(require("./services/telegram"));
 const excelHandler_1 = require("./services/excelHandler");
 const config_1 = require("./services/config/config");
 const notifer_1 = require("./services/notifier/notifer");
+const logger_1 = tslib_1.__importDefault(require("./services/logger/logger"));
 require('dotenv').config();
 async function main() {
     const config = (0, config_1.GetConfig)();
@@ -19,13 +20,13 @@ async function main() {
                 (0, notifer_1.sendNotification)(rows, tgBot, chatID);
             }
             else {
-                console.error('Here is nothing inside');
+                logger_1.default.info('Here is nothing inside');
             }
         });
     };
     tgBot.SetNotifyCallback(NotifyNow);
     tgBot.Run();
-    console.log('Bot is started');
+    logger_1.default.info('Bot is started');
     await (0, notifer_1.runOnTuesdayAndSaturday)(NotifyNow, tgBot);
 }
 main();
