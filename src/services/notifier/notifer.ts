@@ -28,7 +28,7 @@ export async function runOnTuesdayAndSaturday(NotifyNow: (force?: boolean, chatI
         // Check if it's Tuesday and the time is 8:00
         if (isSaturdayEightAM || isTuesdayEightAM) {
             NotifyNow(false, bot.GetRecurrentChatID())
-        } else {
+        } else if(currentMinute === 0) {
             logWrongTime()
         }
 
@@ -51,8 +51,8 @@ export function GetRowsFromExcel(rows: string[][], bot: TgBot, force: boolean) {
 
 function isToday(date: moment.Moment) {
     const today = moment()
-
-    return today.day() == date.day()
+    console.log(`Its today today = ${today.dayOfYear()} and the date is ${date.dayOfYear()}`)
+    return today.dayOfYear() == date.dayOfYear()
 }
 
 export function sendNotification(servers: ServersRows[], bot: TgBot, chatID?: number) {

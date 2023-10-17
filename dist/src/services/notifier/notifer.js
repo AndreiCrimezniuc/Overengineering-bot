@@ -19,7 +19,7 @@ async function runOnTuesdayAndSaturday(NotifyNow, bot) {
         if (isSaturdayEightAM || isTuesdayEightAM) {
             NotifyNow(false, bot.GetRecurrentChatID());
         }
-        else {
+        else if (currentMinute === 0) {
             logWrongTime();
         }
     }, 60000);
@@ -39,7 +39,8 @@ function GetRowsFromExcel(rows, bot, force) {
 exports.GetRowsFromExcel = GetRowsFromExcel;
 function isToday(date) {
     const today = (0, moment_1.default)();
-    return today.day() == date.day();
+    console.log(`Its today today = ${today.dayOfYear()} and the date is ${date.dayOfYear()}`);
+    return today.dayOfYear() == date.dayOfYear();
 }
 function sendNotification(servers, bot, chatID) {
     servers.forEach((el) => {
