@@ -16,8 +16,8 @@ async function main() {
     const NotifyNow = async (force = false, chatID) => {
         await (0, excelHandler_1.GetRows)(config.SpreadSheetID, 'credentials.json').then((data) => {
             if (data != null) {
-                let rows = (0, notifer_1.GetRowsFromExcel)(data.data.values, tgBot, force);
-                (0, notifer_1.sendNotification)(rows, tgBot, chatID);
+                let rows = (0, notifer_1.ConvertRows)(data.data.values, tgBot, force);
+                (0, notifer_1.sendNotification)(rows, tgBot, force, chatID);
             }
             else {
                 logger_1.default.info('Here is nothing inside');
