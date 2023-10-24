@@ -84,6 +84,11 @@ function convertRow(row: string[], bot: TgBot, force: boolean): MinistersRow | u
     }
 }
 
+function isToday(date: moment.Moment) {
+    const today = moment()
+    return today.dayOfYear() == date.dayOfYear()
+}
+
 function onThisWeek(date: moment.Moment): boolean {
     const today = moment()
     return date.isoWeek() == today.isoWeek()
@@ -99,7 +104,7 @@ function FilterMinisterRowsByCriteria(ministers: MinistersRow[], force: boolean)
            return true
         }
 
-        if (!force && isTuesdayOrSaturday(m.date)) {
+        if (!force && isToday(m.day) && isTuesdayOrSaturday(m.date)) {
             return true
         }
     })
