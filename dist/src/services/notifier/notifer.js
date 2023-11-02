@@ -65,6 +65,10 @@ function convertRow(row, bot, force) {
         };
     }
 }
+function isToday(date) {
+    const today = (0, moment_1.default)();
+    return today.dayOfYear() == date.dayOfYear();
+}
 function onThisWeek(date) {
     const today = (0, moment_1.default)();
     return date.isoWeek() == today.isoWeek();
@@ -78,7 +82,7 @@ function FilterMinisterRowsByCriteria(ministers, force) {
         if (force && onThisWeek(m.date)) {
             return true;
         }
-        if (!force && isTuesdayOrSaturday(m.date)) {
+        if (!force && isToday(m.date) && isTuesdayOrSaturday(m.date)) {
             return true;
         }
     });

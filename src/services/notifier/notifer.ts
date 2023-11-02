@@ -104,7 +104,7 @@ function FilterMinisterRowsByCriteria(ministers: MinistersRow[], force: boolean)
            return true
         }
 
-        if (!force && isToday(m.day) && isTuesdayOrSaturday(m.date)) {
+        if (!force && isToday(m.date) && isTuesdayOrSaturday(m.date)) {
             return true
         }
     })
