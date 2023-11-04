@@ -32,8 +32,8 @@ export async function runOnTuesdayAndSaturday(NotifyNow: (scheduleOptions: Sched
         }
 
 
-        const isSaturdayEightAM = currentDay === 6 && currentHour === 19 && currentMinute === 33
-        const isTuesdayEightAM = currentDay === 2 && currentHour === 8 && currentMinute === 0
+        const isSaturdayEightAM = currentDay === 6 && currentHour === 10 && currentMinute === 15
+        const isTuesdayEightAM = currentDay === 2 && currentHour === 10 && currentMinute === 15
 
         // Check if it's Tuesday and the time is 8:00
         if (isSaturdayEightAM || isTuesdayEightAM) {

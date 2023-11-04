@@ -16,8 +16,8 @@ async function runOnTuesdayAndSaturday(NotifyNow, bot) {
         const logWrongTime = () => {
             logger_1.default.warn(`Hm. Skipped recurrent task. Now is just day-${currentDay}, hour-${currentHour} and minutes-${currentMinute}`);
         };
-        const isSaturdayEightAM = currentDay === 6 && currentHour === 19 && currentMinute === 33;
-        const isTuesdayEightAM = currentDay === 2 && currentHour === 8 && currentMinute === 0;
+        const isSaturdayEightAM = currentDay === 6 && currentHour === 10 && currentMinute === 15;
+        const isTuesdayEightAM = currentDay === 2 && currentHour === 10 && currentMinute === 15;
         if (isSaturdayEightAM || isTuesdayEightAM) {
             const scheduleOptions = {
                 audioMinistersOn: true,
