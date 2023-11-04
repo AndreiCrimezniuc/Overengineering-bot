@@ -2,7 +2,16 @@ import TgBot from "../telegram";
 import logger from "../logger/logger";
 import moment from "moment";
 
-const ROWS_IN_TABLE = 11
+const ROWS_IN_TABLE_AUDIO_MINISTERS = 11
+const ROWS_STEWARDS_FROM = 16
+const ROWS_STEWARDS_TO = 23
+
+export type ScheduleOptions = {
+    audioMinistersOn: boolean,
+    stewardsOn:boolean,
+    force?: boolean,
+    chatID?:number
+}
 
 export type MinistersRow = {
     date: moment.Moment,
@@ -12,22 +21,29 @@ export type MinistersRow = {
     SoundLearner: string
 }
 
-export async function runOnTuesdayAndSaturday(NotifyNow: (force?: boolean, chatID?: number) => void, bot: TgBot) {
+export async function runOnTuesdayAndSaturday(NotifyNow: (scheduleOptions: ScheduleOptions) => void, bot: TgBot) {
     setInterval(() => {
         const now = new Date();
         const currentDay = now.getUTCDay();
-        const currentHour = now.getUTCHours() + 3; // because we live in UTC+3
+        const currentHour = now.getUTCHours() + 2; // because we live in UTC+3
         const currentMinute = now.getUTCMinutes();
         const logWrongTime = () => {
             logger.warn(`Hm. Skipped recurrent task. Now is just day-${currentDay}, hour-${currentHour} and minutes-${currentMinute}`)
         }
 
-        const isSaturdayEightAM = currentDay === 6 && currentHour === 8 && currentMinute === 0
+
+        const isSaturdayEightAM = currentDay === 6 && currentHour === 19 && currentMinute === 33
         const isTuesdayEightAM = currentDay === 2 && currentHour === 8 && currentMinute === 0
 
         // Check if it's Tuesday and the time is 8:00
         if (isSaturdayEightAM || isTuesdayEightAM) {
-            NotifyNow(false, bot.GetRecurrentChatID())
+            const scheduleOptions: ScheduleOptions = {
+                audioMinistersOn: true,
+                stewardsOn:true ,
+                chatID: bot.GetRecurrentChatID()
+            }
+
+            NotifyNow(scheduleOptions)
         } else if (currentMinute === 0) {
             logWrongTime()
         }
@@ -35,12 +51,12 @@ export async function runOnTuesdayAndSaturday(NotifyNow: (force?: boolean, chatI
     }, 60000); // Check every minute
 }
 
-export function ConvertRows(rows: string[][], bot: TgBot, force: boolean) {
+export function ConvertRows(rows: string[][]) {
     let resultRows: MinistersRow[] = []
 
-    const namesToHandle = rows.length > ROWS_IN_TABLE ? ROWS_IN_TABLE : rows.length
+    const namesToHandle = rows.length > ROWS_IN_TABLE_AUDIO_MINISTERS ? ROWS_IN_TABLE_AUDIO_MINISTERS : rows.length
     for (let i = 1; i < namesToHandle; i++) {
-        let rowObj = convertRow(rows[i], bot, force)
+        let rowObj = convertRow(rows[i])
         if (rowObj !== undefined) {
             resultRows.push(rowObj)
         }
@@ -49,27 +65,27 @@ export function ConvertRows(rows: string[][], bot: TgBot, force: boolean) {
     return resultRows
 }
 
-export function sendNotification(ministers: MinistersRow[], bot: TgBot, force: boolean, chatID?: number) {
-    const filteredMinisters = FilterMinisterRowsByCriteria(ministers, force)
+export function sendNotification(ministers: MinistersRow[], bot: TgBot, scheduleOptions: ScheduleOptions) {
+    const filteredMinisters = FilterMinisterRowsByCriteria(ministers, scheduleOptions.force ?? false)
 
     filteredMinisters.forEach((m) => {
         if (m.SoundLearner === undefined || m.Sound === undefined || m.FirstMicrophone === undefined || m.SecondMicrophone === undefined) {
             bot.SendMsg(`Привет. Я бот, но у меня что-то сломалось.Однако покажу что нашел в расписании: \n На аппаратуре послужит ${m.Sound}. \n На первом микрофоне: ${m.FirstMicrophone}. \nНа втором микрофоне: ${m.SecondMicrophone}.
-         Пожалуйста, предупреди,если у тебя нет такой возможности.`, chatID).then((r) =>
+         Пожалуйста, предупреди,если у тебя нет такой возможности.`, scheduleOptions.chatID).then((r) =>
                 logger.info(r)
             )
         } else {
             let msg = `Привет. Я бот на стажировке. Пока я еще не уверен в себе, но уже могу предупредить, что: \n <b>На аппаратуре:</b> ${m.Sound} \n <b>На первом микрофоне:</b> ${m.FirstMicrophone} \n <b>На втором микрофоне:</b> ${m.SecondMicrophone} \n<b>Обучение за пультом: </b> ${m.SoundLearner}
          \n Пожалуйста, предупреди,если у тебя нет такой возможности <b><i>заранее</i></b>.`
 
-            bot.SendMsg(msg, chatID).then((r) =>
-                logger.info(r + ` send msg "${msg.substring(0, 10)}..." for ${chatID}`)
+            bot.SendMsg(msg, scheduleOptions.chatID).then((r) =>
+                logger.info(r + ` send msg "${msg.substring(0, 10)}..." for ${scheduleOptions.chatID}`)
             )
         }
     })
 }
 
-function convertRow(row: string[], bot: TgBot, force: boolean): MinistersRow | undefined { // here is solid is dead. It should return object with audo stuff and sendMsg in another function(S-solid)
+function convertRow(row: string[]): MinistersRow | undefined { // here is solid is dead. It should return object with audo stuff and sendMsg in another function(S-solid)
     const date = moment(row[1], "DD-MM-YYYY")
 
     if (date.isValid() && row[2] && row[3] && row[4] && row[5]) { // nolint,please: the most ugly code that I every write
@@ -82,11 +98,6 @@ function convertRow(row: string[], bot: TgBot, force: boolean): MinistersRow | u
             SoundLearner: row[5]
         }
     }
-}
-
-function isToday(date: moment.Moment) {
-    const today = moment()
-    return today.dayOfYear() == date.dayOfYear()
 }
 
 function onThisWeek(date: moment.Moment): boolean {
@@ -104,7 +115,7 @@ function FilterMinisterRowsByCriteria(ministers: MinistersRow[], force: boolean)
            return true
         }
 
-        if (!force && isToday(m.date) && isTuesdayOrSaturday(m.date)) {
+        if (!force && onThisWeek(m.date) && isTuesdayOrSaturday(m.date)) {
             return true
         }
     })

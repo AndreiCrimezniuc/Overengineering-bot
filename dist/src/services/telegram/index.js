@@ -6,7 +6,7 @@ const TelegramBot = require('node-telegram-bot-api');
 class TgBot {
     constructor(token) {
         this.currentChatID = 0;
-        this.recurrentChatID = -1001459090928;
+        this.recurrentChatID = 0;
         this.bot = new TelegramBot(token, {
             polling: true
         });
@@ -26,7 +26,13 @@ class TgBot {
         this.bot.onText(/\/force/, (msg) => {
             this.logger.info(`force schedule for id:${msg.chat.id} fistName:${msg.chat.first_name}`);
             this.currentChatID = msg.chat.id;
-            this.notifyCallback ? this.notifyCallback(true) : this.SendMsg("there is no notify callback", msg.chat.id);
+            const schOptions = {
+                force: false,
+                chatID: msg.currentChatID,
+                stewardsOn: true,
+                audioMinistersOn: true
+            };
+            this.notifyCallback ? this.notifyCallback(schOptions) : this.SendMsg("there is no notify callback", msg.chat.id);
         });
         this.bot.onText(/\/set/, (msg) => {
             this.logger.info(`set recurrent chatID ${msg.chat.id}`);

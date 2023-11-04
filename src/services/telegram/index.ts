@@ -1,13 +1,14 @@
 import {Logger} from "winston";
 import logger from "../logger/logger";
+import {ScheduleOptions} from "../notifier/notifer";
 
 const TelegramBot = require('node-telegram-bot-api');
 
 class TgBot { // toDo: add try catch for all requests
     private bot: typeof TelegramBot
-    private notifyCallback: ((force: boolean) => void) | undefined
+    private notifyCallback: ((ScheduleOptions) => void) | undefined
     private currentChatID: number = 0 // lame way to avoid handleRow weird move
-    private recurrentChatID: number = -1001459090928 //1001459090928
+    private recurrentChatID: number = 0//-1001459090928 //1001459090928
     public logger: Logger
 
     constructor(token: string) {
@@ -18,7 +19,7 @@ class TgBot { // toDo: add try catch for all requests
         this.logger = logger
     }
 
-    public SetNotifyCallback(notify: (force: boolean) => void) {
+    public SetNotifyCallback(notify: (scheduleOptions: ScheduleOptions) => void) {
         this.notifyCallback = notify
     }
 
@@ -26,7 +27,7 @@ class TgBot { // toDo: add try catch for all requests
         this.invokeEvents()
     }
 
-    public SendMsg(text: string, chatID: number = this.currentChatID): Promise< typeof TelegramBot.Message> {
+    public SendMsg(text: string, chatID: number = this.currentChatID): Promise<typeof TelegramBot.Message> {
         this.logger.info(`sending msg "${text.slice(0, 15)}..." to chatID ${chatID}`)
 
         return this.bot.sendMessage(chatID, text, {parse_mode: 'HTML'});
@@ -36,7 +37,14 @@ class TgBot { // toDo: add try catch for all requests
         this.bot.onText(/\/force/, (msg) => {
             this.logger.info(`force schedule for id:${msg.chat.id} fistName:${msg.chat.first_name}`)
             this.currentChatID = msg.chat.id
-            this.notifyCallback ? this.notifyCallback(true) : this.SendMsg("there is no notify callback", msg.chat.id)
+            const schOptions: ScheduleOptions = {
+                force: false,
+                chatID: msg.currentChatID,
+                stewardsOn: true,
+                audioMinistersOn: true
+            }
+
+            this.notifyCallback ? this.notifyCallback(schOptions) : this.SendMsg("there is no notify callback", msg.chat.id)
         })
 
         this.bot.onText(/\/set/, (msg) => { // to keep in runtime bot for main chat

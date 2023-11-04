@@ -13,11 +13,16 @@ async function main() {
         process.exit(1);
     }
     const tgBot = new telegram_1.default(config.TelegramToken);
-    const NotifyNow = async (force = false, chatID) => {
+    const scheduleOptions = {
+        audioMinistersOn: true,
+        stewardsOn: true,
+        force: false,
+    };
+    const NotifyNow = async (scheduleOptions) => {
         await (0, excelHandler_1.GetRows)(config.SpreadSheetID, 'credentials.json').then((data) => {
             if (data != null) {
-                let rows = (0, notifer_1.ConvertRows)(data.data.values, tgBot, force);
-                (0, notifer_1.sendNotification)(rows, tgBot, force, chatID);
+                let rows = (0, notifer_1.ConvertRows)(data.data.values);
+                (0, notifer_1.sendNotification)(rows, tgBot, scheduleOptions);
             }
             else {
                 logger_1.default.info('Here is nothing inside');
