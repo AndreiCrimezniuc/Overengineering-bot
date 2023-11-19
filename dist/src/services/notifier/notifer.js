@@ -22,6 +22,7 @@ async function runOnTuesdayAndSaturday(NotifyNow, bot) {
             const scheduleOptions = {
                 audioMinistersOn: true,
                 stewardsOn: true,
+                debugChatID: bot.debugChatID,
                 chatID: bot.GetRecurrentChatID()
             };
             NotifyNow(scheduleOptions);
@@ -50,7 +51,7 @@ function sendNotification(ministers, bot, scheduleOptions) {
     filteredMinisters.forEach((m) => {
         if (m.SoundLearner === undefined || m.Sound === undefined || m.FirstMicrophone === undefined || m.SecondMicrophone === undefined) {
             bot.SendMsg(`Привет. Я бот, но у меня что-то сломалось.Однако покажу что нашел в расписании: \n На аппаратуре послужит ${m.Sound}. \n На первом микрофоне: ${m.FirstMicrophone}. \nНа втором микрофоне: ${m.SecondMicrophone}.
-         Пожалуйста, предупреди,если у тебя нет такой возможности.`, scheduleOptions.chatID).then((r) => logger_1.default.info(r));
+         Пожалуйста, предупреди,если у тебя нет такой возможности.`, scheduleOptions.debugChatID).then((r) => logger_1.default.info(r));
         }
         else {
             let msg = `Привет. Я бот на стажировке. Пока я еще не уверен в себе, но уже могу предупредить, что: \n <b>На аппаратуре:</b> ${m.Sound} \n <b>На первом микрофоне:</b> ${m.FirstMicrophone} \n <b>На втором микрофоне:</b> ${m.SecondMicrophone} \n<b>Обучение за пультом: </b> ${m.SoundLearner}

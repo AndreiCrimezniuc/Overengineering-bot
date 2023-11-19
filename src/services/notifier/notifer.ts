@@ -11,6 +11,7 @@ export type ScheduleOptions = {
     stewardsOn:boolean,
     force?: boolean,
     chatID?:number
+    debugChatID?: number
 }
 
 export type MinistersRow = {
@@ -40,6 +41,7 @@ export async function runOnTuesdayAndSaturday(NotifyNow: (scheduleOptions: Sched
             const scheduleOptions: ScheduleOptions = {
                 audioMinistersOn: true,
                 stewardsOn:true ,
+                debugChatID: bot.debugChatID,
                 chatID: bot.GetRecurrentChatID()
             }
 
@@ -71,7 +73,7 @@ export function sendNotification(ministers: MinistersRow[], bot: TgBot, schedule
     filteredMinisters.forEach((m) => {
         if (m.SoundLearner === undefined || m.Sound === undefined || m.FirstMicrophone === undefined || m.SecondMicrophone === undefined) {
             bot.SendMsg(`Привет. Я бот, но у меня что-то сломалось.Однако покажу что нашел в расписании: \n На аппаратуре послужит ${m.Sound}. \n На первом микрофоне: ${m.FirstMicrophone}. \nНа втором микрофоне: ${m.SecondMicrophone}.
-         Пожалуйста, предупреди,если у тебя нет такой возможности.`, scheduleOptions.chatID).then((r) =>
+         Пожалуйста, предупреди,если у тебя нет такой возможности.`, scheduleOptions.debugChatID).then((r) =>
                 logger.info(r)
             )
         } else {

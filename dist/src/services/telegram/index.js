@@ -6,7 +6,8 @@ const TelegramBot = require('node-telegram-bot-api');
 class TgBot {
     constructor(token) {
         this.currentChatID = 0;
-        this.recurrentChatID = 0;
+        this.recurrentChatID = -1001459090928;
+        this.debugChatID = -4076621254;
         this.bot = new TelegramBot(token, {
             polling: true
         });

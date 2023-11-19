@@ -17,6 +17,7 @@ async function main() {
         audioMinistersOn: true,
         stewardsOn: true,
         force: false,
+        debugChatID: tgBot.debugChatID
     };
     const NotifyNow = async (scheduleOptions) => {
         await (0, excelHandler_1.GetRows)(config.SpreadSheetID, 'credentials.json').then((data) => {

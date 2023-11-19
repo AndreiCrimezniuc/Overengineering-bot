@@ -8,7 +8,8 @@ class TgBot { // toDo: add try catch for all requests
     private bot: typeof TelegramBot
     private notifyCallback: ((ScheduleOptions) => void) | undefined
     private currentChatID: number = 0 // lame way to avoid handleRow weird move
-    private recurrentChatID: number = 0//-1001459090928 //1001459090928
+    private recurrentChatID: number = -1001459090928
+    public debugChatID: number = -4076621254
     public logger: Logger
 
     constructor(token: string) {

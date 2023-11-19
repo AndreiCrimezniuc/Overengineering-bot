@@ -18,6 +18,7 @@ async function main() {
         audioMinistersOn: true,
         stewardsOn: true,
         force: false,
+        debugChatID: tgBot.debugChatID
     }
 
     const NotifyNow = async (scheduleOptions: ScheduleOptions) => {
