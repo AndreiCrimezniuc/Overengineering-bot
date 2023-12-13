@@ -28,7 +28,7 @@ jobs:
         uses: actions/upload-artifact@v3
         if: always()
         with:
-          name: dist2
-          path: dist2/
+          name: dist
+          path: dist/
           retention-days: 30
 
