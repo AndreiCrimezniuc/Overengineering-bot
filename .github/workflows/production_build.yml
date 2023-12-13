@@ -1,0 +1,24 @@
+name: 'Prod build'
+on:
+  push:
+    branches:
+    - develop
+jobs:
+  prod_build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v2
+
+      - name: nodejs
+        uses: actions/setup-node@v2
+        with:
+          node-version: 18
+
+      - name: install deps
+        run: npm install
+
+      - name: compile ts
+        run: npm run build
+
