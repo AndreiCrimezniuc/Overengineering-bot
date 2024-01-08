@@ -3,14 +3,12 @@ import logger from "../logger/logger";
 import moment from "moment";
 
 const ROWS_IN_TABLE_AUDIO_MINISTERS = 11
-const ROWS_STEWARDS_FROM = 16
-const ROWS_STEWARDS_TO = 23
 
 export type ScheduleOptions = {
     audioMinistersOn: boolean,
-    stewardsOn:boolean,
+    stewardsOn: boolean,
     force?: boolean,
-    chatID?:number
+    chatID?: number
     debugChatID?: number
 }
 
@@ -40,7 +38,7 @@ export async function runOnTuesdayAndSaturday(NotifyNow: (scheduleOptions: Sched
         if (isSaturdayEightAM || isTuesdayEightAM) {
             const scheduleOptions: ScheduleOptions = {
                 audioMinistersOn: true,
-                stewardsOn:true ,
+                stewardsOn: true,
                 debugChatID: bot.debugChatID,
                 chatID: bot.GetRecurrentChatID()
             }
@@ -94,10 +92,10 @@ function convertRow(row: string[]): MinistersRow | undefined { // here is solid 
         logger.info(`converted raw as valid by date for ${date}`)
         return {
             date: date,
-            Sound: row[2],
-            FirstMicrophone: row[3],
-            SecondMicrophone: row[4],
-            SoundLearner: row[5]
+            Sound: MicrophoneDictionary(row[2]),
+            FirstMicrophone: MicrophoneDictionary(row[3]),
+            SecondMicrophone: MicrophoneDictionary(row[4]),
+            SoundLearner: MicrophoneDictionary(row[5])
         }
     }
 }
@@ -108,17 +106,41 @@ function onThisWeek(date: moment.Moment): boolean {
 }
 
 export function isTuesdayOrSaturday(date: moment.Moment) {
-   return [2,6].includes(date.day())
+    return [2, 6].includes(date.day())
 }
 
 function FilterMinisterRowsByCriteria(ministers: MinistersRow[], force: boolean): MinistersRow[] {
-    return ministers.filter((m) =>{
+    return ministers.filter((m) => {
         if (force && onThisWeek(m.date)) {
-           return true
+            return true
         }
 
         if (!force && onThisWeek(m.date) && isTuesdayOrSaturday(m.date)) {
             return true
         }
     })
+}
+
+function MicrophoneDictionary(s: string): string {
+    const ministersDictionary: Map<string, string> = new Map;
+    ministersDictionary.set("Белоусов Н.", "@tokimedo")
+    ministersDictionary.set("Кавлюк И.", "@cavliman")
+    ministersDictionary.set("Кримезнюк А.", "@Andrei_crimezniuc")
+    ministersDictionary.set("Масленников Д.", "@dantes024")
+    ministersDictionary.set("Родионов И.", "@bellylollipop")
+    ministersDictionary.set("Гарбузарь В.", "Гарбузарь В.")
+    ministersDictionary.set("Жокот С.", "Жокот С.")
+    ministersDictionary.set("Курка А.", "@Endrus_Rare")
+    ministersDictionary.set("Кутуряну К.", "@constantincutureanu")
+    ministersDictionary.set("Маноле М.", "@Max_Manole")
+    ministersDictionary.set("Русановский Р.", "@rosinrusanovschi")
+    ministersDictionary.set("Сахечидзе Г.", "Сахечидзе Г.")
+    ministersDictionary.set("Смоляк Д.", "Смоляк Д.")
+    ministersDictionary.set("Страшник А.", "@AurelStrashnik")
+    ministersDictionary.set("Флянку Я.", "@your_pixel")
+    ministersDictionary.set("Чухненко В.", "Чухненко В.")
+    ministersDictionary.set("Нагурня М.", "Нагурня М.")
+    ministersDictionary.set("Русановский В.", "Русановский В.")
+
+    return ministersDictionary.get(s) ?? s
 }
