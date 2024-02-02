@@ -2,7 +2,9 @@ import TgBot from "../telegram";
 import logger from "../logger/logger";
 import moment from "moment";
 
-const ROWS_IN_TABLE_AUDIO_MINISTERS = 11
+const AUDIO_TEAM_ROW_NUMBER = 11
+const SECURITY_TEAM_ROW_START = 16
+const SECURITY_TEAM_ROW_END = 25
 
 export type ScheduleOptions = {
     audioMinistersOn: boolean,
@@ -12,12 +14,23 @@ export type ScheduleOptions = {
     debugChatID?: number
 }
 
-export type MinistersRow = {
-    date: moment.Moment,
+export type AudioTeam = {
+    Date: moment.Moment,
     FirstMicrophone: string,
     SecondMicrophone: string,
     Sound: string,
-    SoundLearner: string
+    SoundLearner: string,
+}
+
+export type Security = {
+    Hall: string,
+    Entrance: string,
+    Date: moment.Moment,
+}
+
+export type MinistersSchedule = {
+    AudioTeamSchedule: AudioTeam[],
+    SecuritySchedule: Security[],
 }
 
 export async function runOnTuesdayAndSaturday(NotifyNow: (scheduleOptions: ScheduleOptions) => void, bot: TgBot) {
@@ -29,7 +42,6 @@ export async function runOnTuesdayAndSaturday(NotifyNow: (scheduleOptions: Sched
         const logWrongTime = () => {
             logger.warn(`Hm. Skipped recurrent task. Now is just day-${currentDay}, hour-${currentHour} and minutes-${currentMinute}`)
         }
-
 
         const isSaturdayEightAM = currentDay === 6 && currentHour === 10 && currentMinute === 15
         const isTuesdayEightAM = currentDay === 2 && currentHour === 10 && currentMinute === 15
@@ -51,47 +63,124 @@ export async function runOnTuesdayAndSaturday(NotifyNow: (scheduleOptions: Sched
     }, 60000); // Check every minute
 }
 
-export function ConvertRows(rows: string[][]) {
-    let resultRows: MinistersRow[] = []
-
-    const namesToHandle = rows.length > ROWS_IN_TABLE_AUDIO_MINISTERS ? ROWS_IN_TABLE_AUDIO_MINISTERS : rows.length
-    for (let i = 1; i < namesToHandle; i++) {
-        let rowObj = convertRow(rows[i])
-        if (rowObj !== undefined) {
-            resultRows.push(rowObj)
-        }
+export function ConvertRows(rows: string[][]): MinistersSchedule {
+    let Ministers: MinistersSchedule = {
+        AudioTeamSchedule: [],
+        SecuritySchedule: [],
     }
 
-    return resultRows
+    const rowsToHandle = rows.length > SECURITY_TEAM_ROW_END ? SECURITY_TEAM_ROW_END : rows.length
+    for (let i = 1; i < rowsToHandle; i++) {
+        if (i < AUDIO_TEAM_ROW_NUMBER) {
+            let rowObj: AudioTeam | undefined = convertAudioTeamRows(rows[i])
+            if (rowObj !== undefined) {
+                Ministers.AudioTeamSchedule.push(rowObj)
+            }
+        }
+
+        if (i >= SECURITY_TEAM_ROW_START && i <= SECURITY_TEAM_ROW_END) {
+            let rowObj: Security | undefined = convertSecurityTeam(rows[i])
+            if (rowObj !== undefined) {
+                Ministers.SecuritySchedule.push(rowObj)
+            }
+        }
+
+    }
+
+    return Ministers
 }
 
-export function sendNotification(ministers: MinistersRow[], bot: TgBot, scheduleOptions: ScheduleOptions) {
+function HandleBrokenSchedule(bot: TgBot, filteredMinisters: MinistersSchedule, i: number, securitySchedule: Security | undefined, scheduleOptions: ScheduleOptions) {
+    bot.SendMsg(`Привет. Кажется расписание составлено не полностью, либо я сломался.
+           \n <b>На аппаратуре</b> послужит ${filteredMinisters.AudioTeamSchedule[i].Sound}. \n
+            <b>На первом микрофоне:</b> ${filteredMinisters.AudioTeamSchedule[i].FirstMicrophone}. \n
+            <b>На втором микрофоне:</b> ${filteredMinisters.AudioTeamSchedule[i].SecondMicrophone}. \n
+         
+            <b>Распорядители:</b>  \n
+            <b>Зал:</b> ${securitySchedule?.Hall} \n
+            <b>Вход:</b>  ${securitySchedule?.Entrance}
+            }
+         Пожалуйста, предупреди,если у тебя нет такой возможности.`, scheduleOptions.debugChatID).then((r) =>
+        logger.info(r)
+    )
+}
+
+function HandleSendingSuccessfulSchedule(filteredMinisters: MinistersSchedule, i: number, securitySchedule: Security | undefined, bot: TgBot, scheduleOptions: ScheduleOptions) {
+    let msg = `
+Привет. Напоминание на сегодня \n 
+    <b>На аппаратуре:</b> ${filteredMinisters.AudioTeamSchedule[i].Sound} 
+    <b>На первом микрофоне:</b> ${filteredMinisters.AudioTeamSchedule[i].FirstMicrophone} 
+    <b>На втором микрофоне:</b> ${filteredMinisters.AudioTeamSchedule[i].SecondMicrophone} 
+    <b>Обучение за пультом: </b> ${filteredMinisters.AudioTeamSchedule[i].SoundLearner} \n `
+
+    let securityMsg = ""
+
+    if (securitySchedule !== undefined &&
+        securitySchedule.Entrance !== undefined &&
+        securitySchedule.Hall !== undefined) {
+        securityMsg = `\nРаспорядители:  
+    <b>Зал:</b> ${securitySchedule.Hall}
+    <b>Вход:</b> ${securitySchedule.Entrance} \n`
+    }
+
+    const warningMsg = `Пожалуйста, предупреди,если у тебя нет такой возможности <b><i>заранее</i></b>.`
+
+    bot.SendMsg(msg + securityMsg + warningMsg, scheduleOptions.chatID).then((r) =>
+        logger.info(r + ` send msg "${msg.substring(0, 10)}..." for ${scheduleOptions.chatID}`)
+    )
+}
+
+export function sendNotification(ministers: MinistersSchedule, bot: TgBot, scheduleOptions: ScheduleOptions) {
     const filteredMinisters = FilterMinisterRowsByCriteria(ministers, scheduleOptions.force ?? false)
 
-    filteredMinisters.forEach((m) => {
-        if (m.SoundLearner === undefined || m.Sound === undefined || m.FirstMicrophone === undefined || m.SecondMicrophone === undefined) {
-            bot.SendMsg(`Привет. Я бот, но у меня что-то сломалось.Однако покажу что нашел в расписании: \n На аппаратуре послужит ${m.Sound}. \n На первом микрофоне: ${m.FirstMicrophone}. \nНа втором микрофоне: ${m.SecondMicrophone}.
-         Пожалуйста, предупреди,если у тебя нет такой возможности.`, scheduleOptions.debugChatID).then((r) =>
-                logger.info(r)
-            )
-        } else {
-            let msg = `Привет. Напоминание на сегодня \n <b>На аппаратуре:</b> ${m.Sound} \n <b>На первом микрофоне:</b> ${m.FirstMicrophone} \n <b>На втором микрофоне:</b> ${m.SecondMicrophone} \n<b>Обучение за пультом: </b> ${m.SoundLearner}
-         \n Пожалуйста, предупреди,если у тебя нет такой возможности <b><i>заранее</i></b>.`
+    for (let i = 0; i < filteredMinisters.AudioTeamSchedule.length; i++) {
+        const securitySchedule = GetSecurityScheduleByDate(filteredMinisters.AudioTeamSchedule[i].Date, ministers)
 
-            bot.SendMsg(msg, scheduleOptions.chatID).then((r) =>
-                logger.info(r + ` send msg "${msg.substring(0, 10)}..." for ${scheduleOptions.chatID}`)
-            )
+        if (filteredMinisters.AudioTeamSchedule[i].SoundLearner === undefined ||
+            filteredMinisters.AudioTeamSchedule[i].Sound === undefined ||
+            filteredMinisters.AudioTeamSchedule[i].FirstMicrophone === undefined ||
+            filteredMinisters.AudioTeamSchedule[i].SecondMicrophone === undefined
+        ) {
+            HandleBrokenSchedule(bot, filteredMinisters, i, securitySchedule, scheduleOptions);
+
+            continue
         }
-    })
+
+        HandleSendingSuccessfulSchedule(filteredMinisters, i, securitySchedule, bot, scheduleOptions);
+
+        return
+    }
 }
 
-function convertRow(row: string[]): MinistersRow | undefined { // here is solid is dead. It should return object with audo stuff and sendMsg in another function(S-solid)
+
+function GetSecurityScheduleByDate(date: moment.Moment, m: MinistersSchedule): Security | undefined {
+    for (let i = 0; i < m.SecuritySchedule.length; i++) {
+        if (date.isSame(m.SecuritySchedule[i].Date)) {
+            return m.SecuritySchedule[i]
+        }
+    }
+}
+
+function convertSecurityTeam(row: string[]): Security | undefined {
+    const date = moment(row[1], "DD-MM-YYYY")
+
+    if (date.isValid() && row[2] && row[3]) { // nolint,please: the most ugly code that I every write
+        logger.info(`converted raw as valid by date for ${date}`)
+        return {
+            Date: date,
+            Hall: MicrophoneDictionary(row[2]),
+            Entrance: MicrophoneDictionary(row[3])
+        }
+    }
+}
+
+function convertAudioTeamRows(row: string[]): AudioTeam | undefined { // here is solid is dead. It should return object with audio stuff and sendMsg in another function(S-solid)
     const date = moment(row[1], "DD-MM-YYYY")
 
     if (date.isValid() && row[2] && row[3] && row[4] && row[5]) { // nolint,please: the most ugly code that I every write
         logger.info(`converted raw as valid by date for ${date}`)
         return {
-            date: date,
+            Date: date,
             Sound: MicrophoneDictionary(row[2]),
             FirstMicrophone: MicrophoneDictionary(row[3]),
             SecondMicrophone: MicrophoneDictionary(row[4]),
@@ -109,16 +198,20 @@ export function isTuesdayOrSaturday(date: moment.Moment) {
     return [2, 6].includes(date.day())
 }
 
-function FilterMinisterRowsByCriteria(ministers: MinistersRow[], force: boolean): MinistersRow[] {
-    return ministers.filter((m) => {
-        if (force && onThisWeek(m.date)) {
+function FilterMinisterRowsByCriteria(ministers: MinistersSchedule, force: boolean): MinistersSchedule { // I guess it should be find instead of filter
+    const filterCallBack = (m: any) => {
+        if (force && onThisWeek(m.Date)) {
             return true
         }
+        if (!force && onThisWeek(m.Date) && isTuesdayOrSaturday(m.Date)) {
+            return true
+        }
+    }
 
-        if (!force && onThisWeek(m.date) && isTuesdayOrSaturday(m.date)) {
-            return true
-        }
-    })
+    ministers.AudioTeamSchedule = ministers.AudioTeamSchedule.filter((filterCallBack))
+    ministers.SecuritySchedule = ministers.SecuritySchedule.filter(filterCallBack)
+
+    return ministers
 }
 
 function MicrophoneDictionary(s: string): string {

@@ -14,18 +14,11 @@ async function main() {
 
     const tgBot = new TgBot(config.TelegramToken)
 
-    const scheduleOptions: ScheduleOptions = {
-        audioMinistersOn: true,
-        stewardsOn: true,
-        force: false,
-        debugChatID: tgBot.debugChatID
-    }
-
     const NotifyNow = async (scheduleOptions: ScheduleOptions) => {
         await GetRowsFromExcel(config.SpreadSheetID, 'credentials.json').then((data) => {
             if (data != null) {
-                let rows = ConvertRows(data.data.values)
-                sendNotification(rows, tgBot, scheduleOptions)
+                let Ministers = ConvertRows(data.data.values)
+                sendNotification(Ministers, tgBot, scheduleOptions)
             } else {
                 logger.info('Here is nothing inside')
             }

@@ -4,7 +4,9 @@ exports.isTuesdayOrSaturday = exports.sendNotification = exports.ConvertRows = e
 const tslib_1 = require("tslib");
 const logger_1 = tslib_1.__importDefault(require("../logger/logger"));
 const moment_1 = tslib_1.__importDefault(require("moment"));
-const ROWS_IN_TABLE_AUDIO_MINISTERS = 11;
+const AUDIO_TEAM_ROW_NUMBER = 11;
+const SECURITY_TEAM_ROW_START = 16;
+const SECURITY_TEAM_ROW_END = 25;
 async function runOnTuesdayAndSaturday(NotifyNow, bot) {
     setInterval(() => {
         const now = new Date();
@@ -32,39 +34,99 @@ async function runOnTuesdayAndSaturday(NotifyNow, bot) {
 }
 exports.runOnTuesdayAndSaturday = runOnTuesdayAndSaturday;
 function ConvertRows(rows) {
-    let resultRows = [];
-    const namesToHandle = rows.length > ROWS_IN_TABLE_AUDIO_MINISTERS ? ROWS_IN_TABLE_AUDIO_MINISTERS : rows.length;
-    for (let i = 1; i < namesToHandle; i++) {
-        let rowObj = convertRow(rows[i]);
-        if (rowObj !== undefined) {
-            resultRows.push(rowObj);
+    let Ministers = {
+        AudioTeamSchedule: [],
+        SecuritySchedule: [],
+    };
+    const rowsToHandle = rows.length > SECURITY_TEAM_ROW_END ? SECURITY_TEAM_ROW_END : rows.length;
+    for (let i = 1; i < rowsToHandle; i++) {
+        if (i < AUDIO_TEAM_ROW_NUMBER) {
+            let rowObj = convertAudioTeamRows(rows[i]);
+            if (rowObj !== undefined) {
+                Ministers.AudioTeamSchedule.push(rowObj);
+            }
+        }
+        if (i >= SECURITY_TEAM_ROW_START && i <= SECURITY_TEAM_ROW_END) {
+            let rowObj = convertSecurityTeam(rows[i]);
+            if (rowObj !== undefined) {
+                Ministers.SecuritySchedule.push(rowObj);
+            }
         }
     }
-    return resultRows;
+    return Ministers;
 }
 exports.ConvertRows = ConvertRows;
+function HandleBrokenSchedule(bot, filteredMinisters, i, securitySchedule, scheduleOptions) {
+    bot.SendMsg(`Привет. Кажется расписание составлено не полностью, либо я сломался.
+           \n <b>На аппаратуре</b> послужит ${filteredMinisters.AudioTeamSchedule[i].Sound}. \n
+            <b>На первом микрофоне:</b> ${filteredMinisters.AudioTeamSchedule[i].FirstMicrophone}. \n
+            <b>На втором микрофоне:</b> ${filteredMinisters.AudioTeamSchedule[i].SecondMicrophone}. \n
+         
+            <b>Распорядители:</b>  \n
+            <b>Зал:</b> ${securitySchedule === null || securitySchedule === void 0 ? void 0 : securitySchedule.Hall} \n
+            <b>Вход:</b>  ${securitySchedule === null || securitySchedule === void 0 ? void 0 : securitySchedule.Entrance}
+            }
+         Пожалуйста, предупреди,если у тебя нет такой возможности.`, scheduleOptions.debugChatID).then((r) => logger_1.default.info(r));
+}
+function HandleSendingSuccessfulSchedule(filteredMinisters, i, securitySchedule, bot, scheduleOptions) {
+    let msg = `
+Привет. Напоминание на сегодня \n 
+    <b>На аппаратуре:</b> ${filteredMinisters.AudioTeamSchedule[i].Sound} 
+    <b>На первом микрофоне:</b> ${filteredMinisters.AudioTeamSchedule[i].FirstMicrophone} 
+    <b>На втором микрофоне:</b> ${filteredMinisters.AudioTeamSchedule[i].SecondMicrophone} 
+    <b>Обучение за пультом: </b> ${filteredMinisters.AudioTeamSchedule[i].SoundLearner} \n `;
+    let securityMsg = "";
+    if (securitySchedule !== undefined &&
+        securitySchedule.Entrance !== undefined &&
+        securitySchedule.Hall !== undefined) {
+        securityMsg = `\nРаспорядители:  
+    <b>Зал:</b> ${securitySchedule.Hall}
+    <b>Вход:</b> ${securitySchedule.Entrance} \n`;
+    }
+    const warningMsg = `Пожалуйста, предупреди,если у тебя нет такой возможности <b><i>заранее</i></b>.`;
+    bot.SendMsg(msg + securityMsg + warningMsg, scheduleOptions.chatID).then((r) => logger_1.default.info(r + ` send msg "${msg.substring(0, 10)}..." for ${scheduleOptions.chatID}`));
+}
 function sendNotification(ministers, bot, scheduleOptions) {
     var _a;
     const filteredMinisters = FilterMinisterRowsByCriteria(ministers, (_a = scheduleOptions.force) !== null && _a !== void 0 ? _a : false);
-    filteredMinisters.forEach((m) => {
-        if (m.SoundLearner === undefined || m.Sound === undefined || m.FirstMicrophone === undefined || m.SecondMicrophone === undefined) {
-            bot.SendMsg(`Привет. Я бот, но у меня что-то сломалось.Однако покажу что нашел в расписании: \n На аппаратуре послужит ${m.Sound}. \n На первом микрофоне: ${m.FirstMicrophone}. \nНа втором микрофоне: ${m.SecondMicrophone}.
-         Пожалуйста, предупреди,если у тебя нет такой возможности.`, scheduleOptions.debugChatID).then((r) => logger_1.default.info(r));
+    for (let i = 0; i < filteredMinisters.AudioTeamSchedule.length; i++) {
+        const securitySchedule = GetSecurityScheduleByDate(filteredMinisters.AudioTeamSchedule[i].Date, ministers);
+        if (filteredMinisters.AudioTeamSchedule[i].SoundLearner === undefined ||
+            filteredMinisters.AudioTeamSchedule[i].Sound === undefined ||
+            filteredMinisters.AudioTeamSchedule[i].FirstMicrophone === undefined ||
+            filteredMinisters.AudioTeamSchedule[i].SecondMicrophone === undefined) {
+            HandleBrokenSchedule(bot, filteredMinisters, i, securitySchedule, scheduleOptions);
+            continue;
         }
-        else {
-            let msg = `Привет. Напоминание на сегодня \n <b>На аппаратуре:</b> ${m.Sound} \n <b>На первом микрофоне:</b> ${m.FirstMicrophone} \n <b>На втором микрофоне:</b> ${m.SecondMicrophone} \n<b>Обучение за пультом: </b> ${m.SoundLearner}
-         \n Пожалуйста, предупреди,если у тебя нет такой возможности <b><i>заранее</i></b>.`;
-            bot.SendMsg(msg, scheduleOptions.chatID).then((r) => logger_1.default.info(r + ` send msg "${msg.substring(0, 10)}..." for ${scheduleOptions.chatID}`));
-        }
-    });
+        HandleSendingSuccessfulSchedule(filteredMinisters, i, securitySchedule, bot, scheduleOptions);
+        return;
+    }
 }
 exports.sendNotification = sendNotification;
-function convertRow(row) {
+function GetSecurityScheduleByDate(date, m) {
+    for (let i = 0; i < m.SecuritySchedule.length; i++) {
+        if (date.isSame(m.SecuritySchedule[i].Date)) {
+            return m.SecuritySchedule[i];
+        }
+    }
+}
+function convertSecurityTeam(row) {
+    const date = (0, moment_1.default)(row[1], "DD-MM-YYYY");
+    if (date.isValid() && row[2] && row[3]) {
+        logger_1.default.info(`converted raw as valid by date for ${date}`);
+        return {
+            Date: date,
+            Hall: MicrophoneDictionary(row[2]),
+            Entrance: MicrophoneDictionary(row[3])
+        };
+    }
+}
+function convertAudioTeamRows(row) {
     const date = (0, moment_1.default)(row[1], "DD-MM-YYYY");
     if (date.isValid() && row[2] && row[3] && row[4] && row[5]) {
         logger_1.default.info(`converted raw as valid by date for ${date}`);
         return {
-            date: date,
+            Date: date,
             Sound: MicrophoneDictionary(row[2]),
             FirstMicrophone: MicrophoneDictionary(row[3]),
             SecondMicrophone: MicrophoneDictionary(row[4]),
@@ -81,14 +143,17 @@ function isTuesdayOrSaturday(date) {
 }
 exports.isTuesdayOrSaturday = isTuesdayOrSaturday;
 function FilterMinisterRowsByCriteria(ministers, force) {
-    return ministers.filter((m) => {
-        if (force && onThisWeek(m.date)) {
+    const filterCallBack = (m) => {
+        if (force && onThisWeek(m.Date)) {
             return true;
         }
-        if (!force && onThisWeek(m.date) && isTuesdayOrSaturday(m.date)) {
+        if (!force && onThisWeek(m.Date) && isTuesdayOrSaturday(m.Date)) {
             return true;
         }
-    });
+    };
+    ministers.AudioTeamSchedule = ministers.AudioTeamSchedule.filter((filterCallBack));
+    ministers.SecuritySchedule = ministers.SecuritySchedule.filter(filterCallBack);
+    return ministers;
 }
 function MicrophoneDictionary(s) {
     var _a;
