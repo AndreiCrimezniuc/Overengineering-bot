@@ -1,36 +1,23 @@
 import TgBot from "./services/telegram";
-import {GetRows as GetRowsFromExcel} from "./services/excelHandler";
-import {GetConfig} from "./services/config/config";
-import {ConvertRows, runOnTuesdayAndSaturday, ScheduleOptions, sendNotification} from "./services/notifier/notifer";
+import {Config, GetConfig} from "./services/config/config";
+import {runOnTuesdayAndSaturday,} from "./services/notifier/notifer";
 import logger from "./services/logger/logger";
 
 require('dotenv').config()
 
 async function main() {
-    const config = GetConfig()
+    const config: Config | undefined = GetConfig()
     if (config === undefined) {
         process.exit(1)
     }
 
     const tgBot = new TgBot(config.TelegramToken)
 
-    const NotifyNow = async (scheduleOptions: ScheduleOptions) => {
-        await GetRowsFromExcel(config.SpreadSheetID, 'credentials.json').then((data) => {
-            if (data != null) {
-                let Ministers = ConvertRows(data.data.values)
-                sendNotification(Ministers, tgBot, scheduleOptions)
-            } else {
-                logger.info('Here is nothing inside')
-            }
-        })
-    }
-
-    tgBot.SetNotifyCallback(NotifyNow)
-    tgBot.Run()
+    tgBot.invokeEvents(config)
 
     logger.info('Bot is started')
 
-    await runOnTuesdayAndSaturday(NotifyNow, tgBot)  //IDK weird of course, it needs to think about it
+    await runOnTuesdayAndSaturday(tgBot, config)  //IDK weird of course, it needs to think about it
 }
 
 main()

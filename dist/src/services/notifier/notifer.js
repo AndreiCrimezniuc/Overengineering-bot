@@ -1,34 +1,43 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isTuesdayOrSaturday = exports.sendNotification = exports.ConvertRows = exports.runOnTuesdayAndSaturday = void 0;
+exports.isTuesdayOrSaturday = exports.sendMinisterNotification = exports.sendGivenNotification = exports.ConvertRows = exports.runOnTuesdayAndSaturday = exports.handleMinisterNotification = void 0;
 const tslib_1 = require("tslib");
 const logger_1 = tslib_1.__importDefault(require("../logger/logger"));
 const moment_1 = tslib_1.__importDefault(require("moment"));
+const excelHandler_1 = require("../excelHandler");
 const AUDIO_TEAM_ROW_NUMBER = 11;
 const SECURITY_TEAM_ROW_START = 16;
 const SECURITY_TEAM_ROW_END = 25;
-async function runOnTuesdayAndSaturday(NotifyNow, bot) {
+async function handleMinisterNotification(config, tgBot, scheduleOptions) {
+    await (0, excelHandler_1.GetRows)(config.SpreadSheetID, 'credentials.json').then((data) => {
+        if (data != null) {
+            let Ministers = ConvertRows(data.data.values);
+            sendMinisterNotification(Ministers, tgBot, scheduleOptions);
+        }
+        else {
+            sendGivenNotification("no data in excel", tgBot, tgBot.debugChatID);
+            logger_1.default.warn('Here is nothing inside');
+        }
+    });
+}
+exports.handleMinisterNotification = handleMinisterNotification;
+async function runOnTuesdayAndSaturday(bot, config) {
     setInterval(() => {
         const now = new Date();
         const currentDay = now.getUTCDay();
         const currentHour = now.getUTCHours() + 2;
         const currentMinute = now.getUTCMinutes();
-        const logWrongTime = () => {
-            logger_1.default.warn(`Hm. Skipped recurrent task. Now is just day-${currentDay}, hour-${currentHour} and minutes-${currentMinute}`);
-        };
         const isSaturdayEightAM = currentDay === 6 && currentHour === 10 && currentMinute === 15;
         const isTuesdayEightAM = currentDay === 2 && currentHour === 10 && currentMinute === 15;
         if (isSaturdayEightAM || isTuesdayEightAM) {
-            const scheduleOptions = {
-                audioMinistersOn: true,
-                stewardsOn: true,
+            handleMinisterNotification(config, bot, {
+                securityOn: true,
                 debugChatID: bot.debugChatID,
                 chatID: bot.GetRecurrentChatID()
-            };
-            NotifyNow(scheduleOptions);
+            });
         }
         else if (currentMinute === 0) {
-            logWrongTime();
+            logger_1.default.info(`Hm. Skipped recurrent task. Now is just day-${currentDay}, hour-${currentHour} and minutes-${currentMinute}`);
         }
     }, 60000);
 }
@@ -46,7 +55,7 @@ function ConvertRows(rows) {
                 Ministers.AudioTeamSchedule.push(rowObj);
             }
         }
-        if (i >= SECURITY_TEAM_ROW_START && i <= SECURITY_TEAM_ROW_END) {
+        if (i >= SECURITY_TEAM_ROW_START - 1 && i <= SECURITY_TEAM_ROW_END - 1) {
             let rowObj = convertSecurityTeam(rows[i]);
             if (rowObj !== undefined) {
                 Ministers.SecuritySchedule.push(rowObj);
@@ -57,7 +66,7 @@ function ConvertRows(rows) {
 }
 exports.ConvertRows = ConvertRows;
 function HandleBrokenSchedule(bot, filteredMinisters, i, securitySchedule, scheduleOptions) {
-    bot.SendMsg(`Привет. Кажется расписание составлено не полностью, либо я сломался.
+    bot.sendMsg(`Привет. Кажется расписание составлено не полностью, либо я сломался.
            \n <b>На аппаратуре</b> послужит ${filteredMinisters.AudioTeamSchedule[i].Sound}. \n
             <b>На первом микрофоне:</b> ${filteredMinisters.AudioTeamSchedule[i].FirstMicrophone}. \n
             <b>На втором микрофоне:</b> ${filteredMinisters.AudioTeamSchedule[i].SecondMicrophone}. \n
@@ -84,13 +93,25 @@ function HandleSendingSuccessfulSchedule(filteredMinisters, i, securitySchedule,
     <b>Вход:</b> ${securitySchedule.Entrance} \n`;
     }
     const warningMsg = `Пожалуйста, предупреди,если у тебя нет такой возможности <b><i>заранее</i></b>.`;
-    bot.SendMsg(msg + securityMsg + warningMsg, scheduleOptions.chatID).then((r) => logger_1.default.info(r + ` send msg "${msg.substring(0, 10)}..." for ${scheduleOptions.chatID}`));
+    bot.sendMsg(msg + securityMsg + warningMsg, scheduleOptions.chatID).then((r) => logger_1.default.info(r + ` send msg "${msg.substring(0, 10)}..." for ${scheduleOptions.chatID}`));
 }
-function sendNotification(ministers, bot, scheduleOptions) {
+function sendGivenNotification(notification, bot, chat) {
+    try {
+        bot.sendMsg(notification, chat).then((r) => logger_1.default.info(r));
+    }
+    catch (e) {
+        logger_1.default.error(e, "Some problem with sending given notification");
+    }
+}
+exports.sendGivenNotification = sendGivenNotification;
+function sendMinisterNotification(ministers, bot, scheduleOptions) {
     var _a;
     const filteredMinisters = FilterMinisterRowsByCriteria(ministers, (_a = scheduleOptions.force) !== null && _a !== void 0 ? _a : false);
     for (let i = 0; i < filteredMinisters.AudioTeamSchedule.length; i++) {
-        const securitySchedule = GetSecurityScheduleByDate(filteredMinisters.AudioTeamSchedule[i].Date, ministers);
+        let securitySchedule = undefined;
+        if (scheduleOptions.securityOn) {
+            securitySchedule = GetSecurityScheduleByDate(filteredMinisters.AudioTeamSchedule[i].Date, ministers);
+        }
         if (filteredMinisters.AudioTeamSchedule[i].SoundLearner === undefined ||
             filteredMinisters.AudioTeamSchedule[i].Sound === undefined ||
             filteredMinisters.AudioTeamSchedule[i].FirstMicrophone === undefined ||
@@ -102,7 +123,7 @@ function sendNotification(ministers, bot, scheduleOptions) {
         return;
     }
 }
-exports.sendNotification = sendNotification;
+exports.sendMinisterNotification = sendMinisterNotification;
 function GetSecurityScheduleByDate(date, m) {
     for (let i = 0; i < m.SecuritySchedule.length; i++) {
         if (date.isSame(m.SecuritySchedule[i].Date)) {

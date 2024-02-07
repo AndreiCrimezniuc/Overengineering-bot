@@ -1,14 +1,15 @@
 import TgBot from "../telegram";
 import logger from "../logger/logger";
 import moment from "moment";
+import {GetRows as GetRowsFromExcel} from "../excelHandler";
+import {Config} from "../config/config";
 
 const AUDIO_TEAM_ROW_NUMBER = 11
 const SECURITY_TEAM_ROW_START = 16
 const SECURITY_TEAM_ROW_END = 25
 
 export type ScheduleOptions = {
-    audioMinistersOn: boolean,
-    stewardsOn: boolean,
+    securityOn?: boolean,
     force?: boolean,
     chatID?: number
     debugChatID?: number
@@ -33,31 +34,39 @@ export type MinistersSchedule = {
     SecuritySchedule: Security[],
 }
 
-export async function runOnTuesdayAndSaturday(NotifyNow: (scheduleOptions: ScheduleOptions) => void, bot: TgBot) {
+
+export async function handleMinisterNotification(config: Config, tgBot: TgBot, scheduleOptions: ScheduleOptions) {
+    await GetRowsFromExcel(config.SpreadSheetID, 'credentials.json').then((data) => {
+        if (data != null) {
+            let Ministers = ConvertRows(data.data.values)
+            sendMinisterNotification(Ministers, tgBot, scheduleOptions)
+        } else {
+            sendGivenNotification("no data in excel", tgBot, tgBot.debugChatID)
+            logger.warn('Here is nothing inside')
+        }
+    })
+}
+
+export async function runOnTuesdayAndSaturday(bot: TgBot, config: Config) {
     setInterval(() => {
         const now = new Date();
         const currentDay = now.getUTCDay();
         const currentHour = now.getUTCHours() + 2; // because we live in UTC+3
         const currentMinute = now.getUTCMinutes();
-        const logWrongTime = () => {
-            logger.warn(`Hm. Skipped recurrent task. Now is just day-${currentDay}, hour-${currentHour} and minutes-${currentMinute}`)
-        }
 
         const isSaturdayEightAM = currentDay === 6 && currentHour === 10 && currentMinute === 15
         const isTuesdayEightAM = currentDay === 2 && currentHour === 10 && currentMinute === 15
 
         // Check if it's Tuesday and the time is 8:00
         if (isSaturdayEightAM || isTuesdayEightAM) {
-            const scheduleOptions: ScheduleOptions = {
-                audioMinistersOn: true,
-                stewardsOn: true,
-                debugChatID: bot.debugChatID,
-                chatID: bot.GetRecurrentChatID()
-            }
-
-            NotifyNow(scheduleOptions)
+            handleMinisterNotification(config, bot,
+                {
+                    securityOn: true,
+                    debugChatID: bot.debugChatID,
+                    chatID: bot.GetRecurrentChatID()
+                })
         } else if (currentMinute === 0) {
-            logWrongTime()
+            logger.info(`Hm. Skipped recurrent task. Now is just day-${currentDay}, hour-${currentHour} and minutes-${currentMinute}`)
         }
 
     }, 60000); // Check every minute
@@ -70,6 +79,8 @@ export function ConvertRows(rows: string[][]): MinistersSchedule {
     }
 
     const rowsToHandle = rows.length > SECURITY_TEAM_ROW_END ? SECURITY_TEAM_ROW_END : rows.length
+
+
     for (let i = 1; i < rowsToHandle; i++) {
         if (i < AUDIO_TEAM_ROW_NUMBER) {
             let rowObj: AudioTeam | undefined = convertAudioTeamRows(rows[i])
@@ -78,20 +89,19 @@ export function ConvertRows(rows: string[][]): MinistersSchedule {
             }
         }
 
-        if (i >= SECURITY_TEAM_ROW_START && i <= SECURITY_TEAM_ROW_END) {
+        if (i >= SECURITY_TEAM_ROW_START - 1 && i <= SECURITY_TEAM_ROW_END -1) {
             let rowObj: Security | undefined = convertSecurityTeam(rows[i])
             if (rowObj !== undefined) {
                 Ministers.SecuritySchedule.push(rowObj)
             }
         }
-
     }
 
     return Ministers
 }
 
 function HandleBrokenSchedule(bot: TgBot, filteredMinisters: MinistersSchedule, i: number, securitySchedule: Security | undefined, scheduleOptions: ScheduleOptions) {
-    bot.SendMsg(`Привет. Кажется расписание составлено не полностью, либо я сломался.
+    bot.sendMsg(`Привет. Кажется расписание составлено не полностью, либо я сломался.
            \n <b>На аппаратуре</b> послужит ${filteredMinisters.AudioTeamSchedule[i].Sound}. \n
             <b>На первом микрофоне:</b> ${filteredMinisters.AudioTeamSchedule[i].FirstMicrophone}. \n
             <b>На втором микрофоне:</b> ${filteredMinisters.AudioTeamSchedule[i].SecondMicrophone}. \n
@@ -124,17 +134,31 @@ function HandleSendingSuccessfulSchedule(filteredMinisters: MinistersSchedule, i
     }
 
     const warningMsg = `Пожалуйста, предупреди,если у тебя нет такой возможности <b><i>заранее</i></b>.`
-
-    bot.SendMsg(msg + securityMsg + warningMsg, scheduleOptions.chatID).then((r) =>
+    bot.sendMsg(msg + securityMsg + warningMsg, scheduleOptions.chatID).then((r) =>
         logger.info(r + ` send msg "${msg.substring(0, 10)}..." for ${scheduleOptions.chatID}`)
     )
 }
 
-export function sendNotification(ministers: MinistersSchedule, bot: TgBot, scheduleOptions: ScheduleOptions) {
+export function sendGivenNotification(notification: string, bot: TgBot, chat: number) {
+    try {
+        bot.sendMsg(notification, chat).then((r) =>
+            logger.info(r)
+        )
+    } catch (e) {
+        logger.error(e, "Some problem with sending given notification")
+    }
+}
+
+
+export function sendMinisterNotification(ministers: MinistersSchedule, bot: TgBot, scheduleOptions: ScheduleOptions) { // some weird stuff here
     const filteredMinisters = FilterMinisterRowsByCriteria(ministers, scheduleOptions.force ?? false)
 
     for (let i = 0; i < filteredMinisters.AudioTeamSchedule.length; i++) {
-        const securitySchedule = GetSecurityScheduleByDate(filteredMinisters.AudioTeamSchedule[i].Date, ministers)
+        let securitySchedule: Security | undefined = undefined
+
+        if (scheduleOptions.securityOn) {
+            securitySchedule = GetSecurityScheduleByDate(filteredMinisters.AudioTeamSchedule[i].Date, ministers)
+        }
 
         if (filteredMinisters.AudioTeamSchedule[i].SoundLearner === undefined ||
             filteredMinisters.AudioTeamSchedule[i].Sound === undefined ||
