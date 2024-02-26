@@ -23,6 +23,20 @@ export type AudioTeam = {
     SoundLearner: string,
 }
 
+function AudioTeamIsValid(t: AudioTeam) {
+    return t.Date !== undefined &&
+        t.SoundLearner !== undefined &&
+        t.Sound !== undefined &&
+        t.FirstMicrophone !== undefined &&
+        t.SecondMicrophone !== undefined
+}
+
+function SecurityTeamIsValid(t: Security) {
+    return t.Date !== undefined &&
+        t.Entrance !== undefined &&
+        t.Hall !== undefined
+}
+
 export type Security = {
     Hall: string,
     Entrance: string,
@@ -34,6 +48,10 @@ export type MinistersSchedule = {
     SecuritySchedule: Security[],
 }
 
+export type MinisterScheduleLatest = {
+    AudioTeamSchedule: AudioTeam,
+    SecuritySchedule: Security,
+}
 
 export async function handleMinisterNotification(config: Config, tgBot: TgBot, scheduleOptions: ScheduleOptions) {
     await GetRowsFromExcel(config.SpreadSheetID, 'credentials.json').then((data) => {
@@ -80,7 +98,6 @@ export function ConvertRows(rows: string[][]): MinistersSchedule {
 
     const rowsToHandle = rows.length > SECURITY_TEAM_ROW_END ? SECURITY_TEAM_ROW_END : rows.length
 
-
     for (let i = 1; i < rowsToHandle; i++) {
         if (i < AUDIO_TEAM_ROW_NUMBER) {
             let rowObj: AudioTeam | undefined = convertAudioTeamRows(rows[i])
@@ -89,7 +106,7 @@ export function ConvertRows(rows: string[][]): MinistersSchedule {
             }
         }
 
-        if (i >= SECURITY_TEAM_ROW_START - 1 && i <= SECURITY_TEAM_ROW_END -1) {
+        if (i >= SECURITY_TEAM_ROW_START - 1 && i <= SECURITY_TEAM_ROW_END - 1) {
             let rowObj: Security | undefined = convertSecurityTeam(rows[i])
             if (rowObj !== undefined) {
                 Ministers.SecuritySchedule.push(rowObj)
@@ -100,37 +117,28 @@ export function ConvertRows(rows: string[][]): MinistersSchedule {
     return Ministers
 }
 
-function HandleBrokenSchedule(bot: TgBot, filteredMinisters: MinistersSchedule, i: number, securitySchedule: Security | undefined, scheduleOptions: ScheduleOptions) {
+function HandleBrokenSchedule(bot: TgBot, ministers: MinistersSchedule, scheduleOptions: ScheduleOptions) {
     bot.sendMsg(`Привет. Кажется расписание составлено не полностью, либо я сломался.
-           \n <b>На аппаратуре</b> послужит ${filteredMinisters.AudioTeamSchedule[i].Sound}. \n
-            <b>На первом микрофоне:</b> ${filteredMinisters.AudioTeamSchedule[i].FirstMicrophone}. \n
-            <b>На втором микрофоне:</b> ${filteredMinisters.AudioTeamSchedule[i].SecondMicrophone}. \n
-         
-            <b>Распорядители:</b>  \n
-            <b>Зал:</b> ${securitySchedule?.Hall} \n
-            <b>Вход:</b>  ${securitySchedule?.Entrance}
-            }
+         Что-то умерло, посмотри код ${JSON.stringify(ministers)}
          Пожалуйста, предупреди,если у тебя нет такой возможности.`, scheduleOptions.debugChatID).then((r) =>
         logger.info(r)
     )
 }
 
-function HandleSendingSuccessfulSchedule(filteredMinisters: MinistersSchedule, i: number, securitySchedule: Security | undefined, bot: TgBot, scheduleOptions: ScheduleOptions) {
+function HandleSendingSuccessfulSchedule(filteredMinisters: MinisterScheduleLatest, bot: TgBot, scheduleOptions: ScheduleOptions) {
     let msg = `
 Привет. Напоминание на сегодня \n 
-    <b>На аппаратуре:</b> ${filteredMinisters.AudioTeamSchedule[i].Sound} 
-    <b>На первом микрофоне:</b> ${filteredMinisters.AudioTeamSchedule[i].FirstMicrophone} 
-    <b>На втором микрофоне:</b> ${filteredMinisters.AudioTeamSchedule[i].SecondMicrophone} 
-    <b>Обучение за пультом: </b> ${filteredMinisters.AudioTeamSchedule[i].SoundLearner} \n `
+    <b>На аппаратуре:</b> ${filteredMinisters.AudioTeamSchedule.Sound} 
+    <b>На первом микрофоне:</b> ${filteredMinisters.AudioTeamSchedule.FirstMicrophone} 
+    <b>На втором микрофоне:</b> ${filteredMinisters.AudioTeamSchedule.SecondMicrophone} 
+    <b>Обучение за пультом: </b> ${filteredMinisters.AudioTeamSchedule.SoundLearner} \n `
 
     let securityMsg = ""
 
-    if (securitySchedule !== undefined &&
-        securitySchedule.Entrance !== undefined &&
-        securitySchedule.Hall !== undefined) {
+    if (SecurityTeamIsValid(filteredMinisters.SecuritySchedule)) {
         securityMsg = `\nРаспорядители:  
-    <b>Зал:</b> ${securitySchedule.Hall}
-    <b>Вход:</b> ${securitySchedule.Entrance} \n`
+    <b>Зал:</b> ${filteredMinisters.SecuritySchedule.Hall}
+    <b>Вход:</b> ${filteredMinisters.SecuritySchedule.Entrance} \n`
     }
 
     const warningMsg = `Пожалуйста, предупреди,если у тебя нет такой возможности <b><i>заранее</i></b>.`
@@ -151,38 +159,19 @@ export function sendGivenNotification(notification: string, bot: TgBot, chat: nu
 
 
 export function sendMinisterNotification(ministers: MinistersSchedule, bot: TgBot, scheduleOptions: ScheduleOptions) { // some weird stuff here
-    const filteredMinisters = FilterMinisterRowsByCriteria(ministers, scheduleOptions.force ?? false)
-
-    for (let i = 0; i < filteredMinisters.AudioTeamSchedule.length; i++) {
-        let securitySchedule: Security | undefined = undefined
-
-        if (scheduleOptions.securityOn) {
-            securitySchedule = GetSecurityScheduleByDate(filteredMinisters.AudioTeamSchedule[i].Date, ministers)
-        }
-
-        if (filteredMinisters.AudioTeamSchedule[i].SoundLearner === undefined ||
-            filteredMinisters.AudioTeamSchedule[i].Sound === undefined ||
-            filteredMinisters.AudioTeamSchedule[i].FirstMicrophone === undefined ||
-            filteredMinisters.AudioTeamSchedule[i].SecondMicrophone === undefined
-        ) {
-            HandleBrokenSchedule(bot, filteredMinisters, i, securitySchedule, scheduleOptions);
-
-            continue
-        }
-
-        HandleSendingSuccessfulSchedule(filteredMinisters, i, securitySchedule, bot, scheduleOptions);
-
-        return
+    if (ministers.AudioTeamSchedule.length === 0) {
+        HandleBrokenSchedule(bot, ministers, scheduleOptions);
     }
-}
 
+    let filteredMinisters = FilterMinisterRowsByCriteria(ministers, scheduleOptions.force ?? false)
 
-function GetSecurityScheduleByDate(date: moment.Moment, m: MinistersSchedule): Security | undefined {
-    for (let i = 0; i < m.SecuritySchedule.length; i++) {
-        if (date.isSame(m.SecuritySchedule[i].Date)) {
-            return m.SecuritySchedule[i]
-        }
+    if (AudioTeamIsValid(filteredMinisters.AudioTeamSchedule)) {
+        HandleSendingSuccessfulSchedule(filteredMinisters, bot, scheduleOptions);
+    } else {
+        HandleBrokenSchedule(bot, ministers, scheduleOptions);
     }
+
+    return
 }
 
 function convertSecurityTeam(row: string[]): Security | undefined {
@@ -222,8 +211,31 @@ export function isTuesdayOrSaturday(date: moment.Moment) {
     return [2, 6].includes(date.day())
 }
 
-function FilterMinisterRowsByCriteria(ministers: MinistersSchedule, force: boolean): MinistersSchedule { // I guess it should be find instead of filter
-    const filterCallBack = (m: any) => {
+
+export function getLatestMinistersSchedule(ministers: MinistersSchedule): MinisterScheduleLatest {
+    function findLatestValue<T extends { Date: moment.Moment }>(schedule: T[]): T {
+        let latestValue: T = schedule[0];
+
+        for (const item of schedule) {
+            if (latestValue === null || item.Date.isAfter(latestValue.Date)) {
+                latestValue = item;
+            }
+        }
+
+        return latestValue;
+    }
+
+    const latestAudioTeam: AudioTeam = findLatestValue(ministers.AudioTeamSchedule);
+    const latestSecurityTeam: Security = findLatestValue(ministers.SecuritySchedule);
+
+    return {
+        AudioTeamSchedule: latestAudioTeam,
+        SecuritySchedule: latestSecurityTeam
+    }
+}
+
+function FilterMinisterRowsByCriteria(ministers: MinistersSchedule, force: boolean): MinisterScheduleLatest {
+    const filterCallBack = <T extends { Date: moment.Moment }>(m: T) => {
         if (force && onThisWeek(m.Date)) {
             return true
         }
@@ -235,7 +247,7 @@ function FilterMinisterRowsByCriteria(ministers: MinistersSchedule, force: boole
     ministers.AudioTeamSchedule = ministers.AudioTeamSchedule.filter((filterCallBack))
     ministers.SecuritySchedule = ministers.SecuritySchedule.filter(filterCallBack)
 
-    return ministers
+    return getLatestMinistersSchedule(ministers)
 }
 
 function MicrophoneDictionary(s: string): string {
