@@ -19,7 +19,6 @@ export type AudioTeam = {
     FirstMicrophone: string,
     SecondMicrophone: string,
     Sound: string,
-    SoundLearner: string,
 }
 
 export type Security = {
@@ -68,8 +67,8 @@ export function ConvertRows(rows: string[][]): MinistersSchedule {
         AudioTeamSchedule: [],
         SecuritySchedule: [],
     }
-
     const rowsToHandle = rows.length > SECURITY_TEAM_ROW_END ? SECURITY_TEAM_ROW_END : rows.length
+
     for (let i = 1; i < rowsToHandle; i++) {
         if (i < AUDIO_TEAM_ROW_NUMBER) {
             let rowObj: AudioTeam | undefined = convertAudioTeamRows(rows[i])
@@ -86,7 +85,6 @@ export function ConvertRows(rows: string[][]): MinistersSchedule {
         }
 
     }
-
     return Ministers
 }
 
@@ -110,8 +108,7 @@ function HandleSendingSuccessfulSchedule(filteredMinisters: MinistersSchedule, i
 Привет. Напоминание на сегодня \n 
     <b>На аппаратуре:</b> ${filteredMinisters.AudioTeamSchedule[i].Sound} 
     <b>На первом микрофоне:</b> ${filteredMinisters.AudioTeamSchedule[i].FirstMicrophone} 
-    <b>На втором микрофоне:</b> ${filteredMinisters.AudioTeamSchedule[i].SecondMicrophone} 
-    <b>Обучение за пультом: </b> ${filteredMinisters.AudioTeamSchedule[i].SoundLearner} \n `
+    <b>На втором микрофоне:</b> ${filteredMinisters.AudioTeamSchedule[i].SecondMicrophone} \n`
 
     let securityMsg = ""
 
@@ -134,10 +131,9 @@ export function sendNotification(ministers: MinistersSchedule, bot: TgBot, sched
     const filteredMinisters = FilterMinisterRowsByCriteria(ministers, scheduleOptions.force ?? false)
 
     for (let i = 0; i < filteredMinisters.AudioTeamSchedule.length; i++) {
-        const securitySchedule = GetSecurityScheduleByDate(filteredMinisters.AudioTeamSchedule[i].Date, ministers)
+        const securitySchedule = GetSecurityScheduleByDate(moment(), ministers)
 
-        if (filteredMinisters.AudioTeamSchedule[i].SoundLearner === undefined ||
-            filteredMinisters.AudioTeamSchedule[i].Sound === undefined ||
+        if (filteredMinisters.AudioTeamSchedule[i].Sound === undefined ||
             filteredMinisters.AudioTeamSchedule[i].FirstMicrophone === undefined ||
             filteredMinisters.AudioTeamSchedule[i].SecondMicrophone === undefined
         ) {
@@ -176,22 +172,20 @@ function convertSecurityTeam(row: string[]): Security | undefined {
 
 function convertAudioTeamRows(row: string[]): AudioTeam | undefined { // here is solid is dead. It should return object with audo stuff and sendMsg in another function(S-solid)
     const date = moment(row[1], "DD-MM-YYYY")
+    if (date.isValid() && row[2] && row[3] && row[4]) { // nolint,please: the most ugly code that I every write
 
-    if (date.isValid() && row[2] && row[3] && row[4] && row[5]) { // nolint,please: the most ugly code that I every write
         logger.info(`converted raw as valid by date for ${date}`)
         return {
             Date: date,
             Sound: MicrophoneDictionary(row[2]),
             FirstMicrophone: MicrophoneDictionary(row[3]),
-            SecondMicrophone: MicrophoneDictionary(row[4]),
-            SoundLearner: MicrophoneDictionary(row[5])
+            SecondMicrophone: MicrophoneDictionary(row[4])
         }
     }
 }
 
 function onThisWeek(date: moment.Moment): boolean {
-    const today = moment()
-    return date.isoWeek() == today.isoWeek()
+    return date.isoWeek() == moment().isoWeek()
 }
 
 export function isTuesdayOrSaturday(date: moment.Moment) {

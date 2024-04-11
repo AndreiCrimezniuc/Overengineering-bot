@@ -73,8 +73,7 @@ function HandleSendingSuccessfulSchedule(filteredMinisters, i, securitySchedule,
 Привет. Напоминание на сегодня \n 
     <b>На аппаратуре:</b> ${filteredMinisters.AudioTeamSchedule[i].Sound} 
     <b>На первом микрофоне:</b> ${filteredMinisters.AudioTeamSchedule[i].FirstMicrophone} 
-    <b>На втором микрофоне:</b> ${filteredMinisters.AudioTeamSchedule[i].SecondMicrophone} 
-    <b>Обучение за пультом: </b> ${filteredMinisters.AudioTeamSchedule[i].SoundLearner} \n `;
+    <b>На втором микрофоне:</b> ${filteredMinisters.AudioTeamSchedule[i].SecondMicrophone} \n`;
     let securityMsg = "";
     if (securitySchedule !== undefined &&
         securitySchedule.Entrance !== undefined &&
@@ -90,9 +89,8 @@ function sendNotification(ministers, bot, scheduleOptions) {
     var _a;
     const filteredMinisters = FilterMinisterRowsByCriteria(ministers, (_a = scheduleOptions.force) !== null && _a !== void 0 ? _a : false);
     for (let i = 0; i < filteredMinisters.AudioTeamSchedule.length; i++) {
-        const securitySchedule = GetSecurityScheduleByDate(filteredMinisters.AudioTeamSchedule[i].Date, ministers);
-        if (filteredMinisters.AudioTeamSchedule[i].SoundLearner === undefined ||
-            filteredMinisters.AudioTeamSchedule[i].Sound === undefined ||
+        const securitySchedule = GetSecurityScheduleByDate((0, moment_1.default)(), ministers);
+        if (filteredMinisters.AudioTeamSchedule[i].Sound === undefined ||
             filteredMinisters.AudioTeamSchedule[i].FirstMicrophone === undefined ||
             filteredMinisters.AudioTeamSchedule[i].SecondMicrophone === undefined) {
             HandleBrokenSchedule(bot, filteredMinisters, i, securitySchedule, scheduleOptions);
@@ -123,20 +121,18 @@ function convertSecurityTeam(row) {
 }
 function convertAudioTeamRows(row) {
     const date = (0, moment_1.default)(row[1], "DD-MM-YYYY");
-    if (date.isValid() && row[2] && row[3] && row[4] && row[5]) {
+    if (date.isValid() && row[2] && row[3] && row[4]) {
         logger_1.default.info(`converted raw as valid by date for ${date}`);
         return {
             Date: date,
             Sound: MicrophoneDictionary(row[2]),
             FirstMicrophone: MicrophoneDictionary(row[3]),
-            SecondMicrophone: MicrophoneDictionary(row[4]),
-            SoundLearner: MicrophoneDictionary(row[5])
+            SecondMicrophone: MicrophoneDictionary(row[4])
         };
     }
 }
 function onThisWeek(date) {
-    const today = (0, moment_1.default)();
-    return date.isoWeek() == today.isoWeek();
+    return date.isoWeek() == (0, moment_1.default)().isoWeek();
 }
 function isTuesdayOrSaturday(date) {
     return [2, 6].includes(date.day());
