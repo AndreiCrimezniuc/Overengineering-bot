@@ -1,6 +1,7 @@
 import TgBot from "../telegram";
 import logger from "../logger/logger";
 import moment from "moment";
+import {compute} from "googleapis/build/src/apis/compute";
 
 const AUDIO_TEAM_ROW_NUMBER = 11
 const SECURITY_TEAM_ROW_START = 16
@@ -122,9 +123,19 @@ function HandleSendingSuccessfulSchedule(filteredMinisters: MinistersSchedule, i
 
     const warningMsg = `Пожалуйста, предупреди,если у тебя нет такой возможности <b><i>заранее</i></b>.`
 
-    bot.SendMsg(msg + securityMsg + warningMsg, scheduleOptions.chatID).then((r) =>
+    let conflictMsg = ""
+    if (securitySchedule != undefined)  {
+         conflictMsg = isThereConflictsInSchedule(filteredMinisters.AudioTeamSchedule[i], securitySchedule) ? "\n \n <b> Кажется есть конфликты в расписании</b>" : ""
+    }
+
+    bot.SendMsg(msg + securityMsg + warningMsg + conflictMsg, scheduleOptions.chatID).then((r) =>
         logger.info(r + ` send msg "${msg.substring(0, 10)}..." for ${scheduleOptions.chatID}`)
     )
+}
+
+function isThereConflictsInSchedule(audioTeam: AudioTeam, st: Security): boolean {
+    return audioTeam.FirstMicrophone === st.Hall || audioTeam.SecondMicrophone === st.Hall || audioTeam.Sound === st.Hall ||
+           audioTeam.FirstMicrophone === st.Entrance || audioTeam.SecondMicrophone === st.Entrance || audioTeam.Sound === st.Entrance
 }
 
 export function sendNotification(ministers: MinistersSchedule, bot: TgBot, scheduleOptions: ScheduleOptions) {
@@ -132,7 +143,6 @@ export function sendNotification(ministers: MinistersSchedule, bot: TgBot, sched
 
     for (let i = 0; i < filteredMinisters.AudioTeamSchedule.length; i++) {
         const securitySchedule = GetSecurityScheduleByDate(moment(), ministers)
-
         if (filteredMinisters.AudioTeamSchedule[i].Sound === undefined ||
             filteredMinisters.AudioTeamSchedule[i].FirstMicrophone === undefined ||
             filteredMinisters.AudioTeamSchedule[i].SecondMicrophone === undefined
@@ -151,7 +161,7 @@ export function sendNotification(ministers: MinistersSchedule, bot: TgBot, sched
 
 function GetSecurityScheduleByDate(date: moment.Moment, m: MinistersSchedule): Security | undefined {
     for (let i = 0; i < m.SecuritySchedule.length; i++) {
-        if (date.isSame(m.SecuritySchedule[i].Date)) {
+        if (date.format("YYYY-MM-DD") === m.SecuritySchedule[i].Date.format("YYYY-MM-DD")) {
             return m.SecuritySchedule[i]
         }
     }

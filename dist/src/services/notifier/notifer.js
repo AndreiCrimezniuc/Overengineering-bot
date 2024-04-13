@@ -83,7 +83,15 @@ function HandleSendingSuccessfulSchedule(filteredMinisters, i, securitySchedule,
     <b>Вход:</b> ${securitySchedule.Entrance} \n`;
     }
     const warningMsg = `Пожалуйста, предупреди,если у тебя нет такой возможности <b><i>заранее</i></b>.`;
-    bot.SendMsg(msg + securityMsg + warningMsg, scheduleOptions.chatID).then((r) => logger_1.default.info(r + ` send msg "${msg.substring(0, 10)}..." for ${scheduleOptions.chatID}`));
+    let conflictMsg = "";
+    if (securitySchedule != undefined) {
+        conflictMsg = isThereConflictsInSchedule(filteredMinisters.AudioTeamSchedule[i], securitySchedule) ? "\n \n <b> Кажется есть конфликты в расписании</b>" : "";
+    }
+    bot.SendMsg(msg + securityMsg + warningMsg + conflictMsg, scheduleOptions.chatID).then((r) => logger_1.default.info(r + ` send msg "${msg.substring(0, 10)}..." for ${scheduleOptions.chatID}`));
+}
+function isThereConflictsInSchedule(audioTeam, st) {
+    return audioTeam.FirstMicrophone === st.Hall || audioTeam.SecondMicrophone === st.Hall || audioTeam.Sound === st.Hall ||
+        audioTeam.FirstMicrophone === st.Entrance || audioTeam.SecondMicrophone === st.Entrance || audioTeam.Sound === st.Entrance;
 }
 function sendNotification(ministers, bot, scheduleOptions) {
     var _a;
@@ -103,7 +111,7 @@ function sendNotification(ministers, bot, scheduleOptions) {
 exports.sendNotification = sendNotification;
 function GetSecurityScheduleByDate(date, m) {
     for (let i = 0; i < m.SecuritySchedule.length; i++) {
-        if (date.isSame(m.SecuritySchedule[i].Date)) {
+        if (date.format("YYYY-MM-DD") === m.SecuritySchedule[i].Date.format("YYYY-MM-DD")) {
             return m.SecuritySchedule[i];
         }
     }
