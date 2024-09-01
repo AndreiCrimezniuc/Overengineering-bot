@@ -1,10 +1,22 @@
 import TgBot from "./services/telegram";
-import {GetRows as GetRowsFromExcel} from "./services/excelHandler";
+import {GetSpreadsheet as GetRowsFromExcel} from "./services/excelHandler";
 import {GetConfig} from "./services/config/config";
-import {ConvertRows, runOnTuesdayAndSaturday, ScheduleOptions, sendNotification} from "./services/notifier/notifer";
+import {
+    MinisterScheduleFromRawRows,
+    runOnTuesdayAndSaturday,
+    ScheduleOptions,
+    sendNotification,
+    SpeakerScheduleFromRawRows
+} from "./services/notifier/notifer";
 import logger from "./services/logger/logger";
 
+import moment from 'moment';
+import 'moment/locale/ru'; // Import the Russian locale
+
 require('dotenv').config()
+
+const _credentialsFile = 'credentials.json'
+const _ministersFilenameExcel = 'График распорядителей'
 
 async function main() {
     const config = GetConfig()
@@ -15,14 +27,30 @@ async function main() {
     const tgBot = new TgBot(config.TelegramToken)
 
     const NotifyNow = async (scheduleOptions: ScheduleOptions) => {
-        await GetRowsFromExcel(config.SpreadSheetID, 'credentials.json').then((data) => {
-            if (data != null) {
-                let Ministers = ConvertRows(data.data.values)
-                sendNotification(Ministers, tgBot, scheduleOptions)
-            } else {
-                logger.info('Here is nothing inside')
+        try {
+            const rawMinisters = await GetRowsFromExcel(config.MinisterSheetID, _ministersFilenameExcel, _credentialsFile)
+            logger.info("Got data from Excel for ministers")
+
+            const rawSpeakers = await GetRowsFromExcel(config.SpeakerSheetID, getSpeakerRange(), _credentialsFile)
+            logger.info("Got data from Excel for ministers")
+
+            if (rawMinisters == null || rawSpeakers == null) {
+                logger.error("No data in excel fro ministers")
+
+                return
             }
-        })
+
+            sendNotification(
+                SpeakerScheduleFromRawRows(rawSpeakers.data.values),
+                MinisterScheduleFromRawRows(rawMinisters.data.values),
+                tgBot,
+                scheduleOptions)
+
+        } catch (error) {
+            logger.error("error fetching rows from excel:", error)
+
+            return
+        }
     }
 
     tgBot.SetNotifyCallback(NotifyNow)
@@ -30,7 +58,12 @@ async function main() {
 
     logger.info('Bot is started')
 
-    await runOnTuesdayAndSaturday(NotifyNow, tgBot)  //IDK weird of course, it needs to think about it
+    await runOnTuesdayAndSaturday(NotifyNow, tgBot)
+}
+
+function getSpeakerRange(): string {
+    moment.locale('ru');
+    return moment().format('MMMM YYYY') + "!A1:H124";
 }
 
 main()

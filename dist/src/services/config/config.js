@@ -12,9 +12,15 @@ function GetConfig() {
         console.error("spread sheet ID is not provided in .env");
         return undefined;
     }
+    const speakerSheetID = process.env.SPEAKER_SHEET_ID;
+    if (speakerSheetID === undefined) {
+        console.error("speaker sheet ID is not provided in .env");
+        return undefined;
+    }
     return {
         TelegramToken: tgToken,
-        SpreadSheetID: spreadSheetID
+        MinisterSheetID: spreadSheetID,
+        SpeakerSheetID: speakerSheetID
     };
 }
 exports.GetConfig = GetConfig;
