@@ -33,13 +33,12 @@ exports.runOnTuesdayAndSaturday = runOnTuesdayAndSaturday;
 function SpeakerScheduleFromRawRows(rows) {
     let todayDateLine = 0;
     let nextDateLine = 0;
-    logger_1.default.info("today is ");
     for (let i = 1; i < rows.length; i++) {
-        if (rows[i][1] !== undefined && (0, moment_1.default)(rows[i][1], 'DD.MM.YYYY').isSame((0, moment_1.default)(), 'day')) {
+        if (rows[i][1] !== undefined && (0, moment_1.default)(rows[i][1], 'DD.MM.YYYY').isSame((0, moment_1.default)().add(1, 'days'), 'day')) {
             todayDateLine = i;
             logger_1.default.info("Got line where to start :" + todayDateLine);
         }
-        if (rows[i][1] !== undefined && (0, moment_1.default)(rows[i][1], 'DD.MM.YYYY').isSame((0, moment_1.default)().add(7, 'days'), 'day')) {
+        if (rows[i][1] !== undefined && (0, moment_1.default)(rows[i][1], 'DD.MM.YYYY').isSame((0, moment_1.default)().add(6, 'days'), 'day')) {
             nextDateLine = i;
             logger_1.default.info("Got line where to end :" + nextDateLine);
             break;
