@@ -16,13 +16,14 @@ async function main() {
     if (config === undefined) {
         process.exit(1);
     }
+    logger_1.default.level = config.LogLevel;
     const tgBot = new telegram_1.default(config.TelegramToken);
     const NotifyNow = async (scheduleOptions) => {
         try {
             const rawMinisters = await (0, excelHandler_1.GetSpreadsheet)(config.MinisterSheetID, _ministersFilenameExcel, _credentialsFile);
             logger_1.default.info("Got data from Excel for ministers");
             const rawSpeakers = await (0, excelHandler_1.GetSpreadsheet)(config.SpeakerSheetID, getSpeakerRange(), _credentialsFile);
-            logger_1.default.info("Got data from Excel for ministers");
+            logger_1.default.info("Got data from Excel for speakers");
             if (rawMinisters == null || rawSpeakers == null) {
                 logger_1.default.error("No data in excel fro ministers");
                 return;
