@@ -20,7 +20,8 @@ function GetConfig() {
     return {
         TelegramToken: tgToken,
         MinisterSheetID: spreadSheetID,
-        SpeakerSheetID: speakerSheetID
+        SpeakerSheetID: speakerSheetID,
+        LogLevel: process.env.LOG_LEVEL || "info"
     };
 }
 exports.GetConfig = GetConfig;
