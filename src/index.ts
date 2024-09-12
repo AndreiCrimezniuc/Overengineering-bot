@@ -24,6 +24,8 @@ async function main() {
         process.exit(1)
     }
 
+    logger.level = config.LogLevel
+
     const tgBot = new TgBot(config.TelegramToken)
 
     const NotifyNow = async (scheduleOptions: ScheduleOptions) => {
@@ -32,7 +34,7 @@ async function main() {
             logger.info("Got data from Excel for ministers")
 
             const rawSpeakers = await GetRowsFromExcel(config.SpeakerSheetID, getSpeakerRange(), _credentialsFile)
-            logger.info("Got data from Excel for ministers")
+            logger.info("Got data from Excel for speakers")
 
             if (rawMinisters == null || rawSpeakers == null) {
                 logger.error("No data in excel fro ministers")

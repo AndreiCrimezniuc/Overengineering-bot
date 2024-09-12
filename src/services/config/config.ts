@@ -2,6 +2,7 @@ type Config = {
     TelegramToken: string
     MinisterSheetID: string
     SpeakerSheetID: string
+    LogLevel: string
 }
 
 function GetConfig(): Config | undefined {
@@ -28,7 +29,8 @@ function GetConfig(): Config | undefined {
     return {
         TelegramToken: tgToken,
         MinisterSheetID: spreadSheetID,
-        SpeakerSheetID: speakerSheetID
+        SpeakerSheetID: speakerSheetID,
+        LogLevel: process.env.LOG_LEVEL || "info"
     }
 }
 

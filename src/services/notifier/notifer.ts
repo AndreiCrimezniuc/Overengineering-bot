@@ -2,10 +2,6 @@ import TgBot from "../telegram";
 import logger from "../logger/logger";
 import moment from "moment";
 
-const AUDIO_TEAM_ROW_NUMBER = 11
-const SECURITY_TEAM_ROW_START = 16
-const SECURITY_TEAM_ROW_END = 25
-
 export type ScheduleOptions = {
     audioMinistersOn: boolean,
     stewardsOn: boolean,
@@ -78,16 +74,14 @@ export function SpeakerScheduleFromRawRows(rows: string[][]): SpeakerSchedule | 
     let todayDateLine = 0
     let nextDateLine = 0
 
-    logger.info("today is ")
 
     // not elegant, but it doesn't matter
     for (let i = 1; i < rows.length; i++) {
-
-        if (rows[i][1] !== undefined && moment(rows[i][1], 'DD.MM.YYYY').isSame(moment(), 'day')) {
+        if (rows[i][1] !== undefined && moment(rows[i][1], 'DD.MM.YYYY').isSame(moment().subtract(1, 'days'), 'day')) {
             todayDateLine = i
             logger.info("Got line where to start :" + todayDateLine)
         }
-        if (rows[i][1] !== undefined && moment(rows[i][1], 'DD.MM.YYYY').isSame(moment().add(7, 'days'), 'day')) {
+        if (rows[i][1] !== undefined && moment(rows[i][1], 'DD.MM.YYYY').isSame(moment().add(4, 'days'), 'day')) {
             nextDateLine = i;
             logger.info("Got line where to end :" + nextDateLine)
 
@@ -96,7 +90,7 @@ export function SpeakerScheduleFromRawRows(rows: string[][]): SpeakerSchedule | 
 
     }
 
-    if (todayDateLine == 0 && nextDateLine == 0) {
+    if (todayDateLine == 0 || nextDateLine == 0) {
         logger.info("Got nothing about speakers in excel")
         return undefined
     }
@@ -104,7 +98,7 @@ export function SpeakerScheduleFromRawRows(rows: string[][]): SpeakerSchedule | 
     let schedule: SpeakerSchedule = {
         Date: moment()
     }
-    for (let i = todayDateLine; i <= nextDateLine; i++) {
+    for (let i = todayDateLine; i < nextDateLine; i++) {
         if (rows[i].some(cell => cell.includes("Председатель:")) && schedule.Chairman === undefined) {
             schedule.Chairman = rows[i][6];
             logger.info("Got Role: " + rows[i][6]);
@@ -163,17 +157,30 @@ export function MinisterScheduleFromRawRows(rows: string[][]): MinistersSchedule
         AudioTeamSchedule: [],
         SecuritySchedule: [],
     }
-    const rowsToHandle = rows.length > SECURITY_TEAM_ROW_END ? SECURITY_TEAM_ROW_END : rows.length
 
-    for (let i = 1; i < rowsToHandle; i++) {
-        if (i < AUDIO_TEAM_ROW_NUMBER) {
+    let securityRawsStartFrom: number = 0
+    let securityRawsLength: number = 15
+
+
+    for (let i = 1; i < rows.length; i++) {
+        if (rows[i].some(cell => cell.includes("Распорядитель Зал"))) {
+            securityRawsStartFrom = i+1
+
+            break
+        }
+    }
+
+    let AudioTeamRawsEndIn: number = securityRawsStartFrom - 1
+
+    for (let i = 0; i < rows.length; i++) {
+        if (i <= AudioTeamRawsEndIn) {
             let rowObj: AudioTeam | undefined = convertAudioTeamRows(rows[i])
             if (rowObj !== undefined) {
                 Ministers.AudioTeamSchedule.push(rowObj)
             }
         }
 
-        if (i >= SECURITY_TEAM_ROW_START && i <= SECURITY_TEAM_ROW_END) {
+        if (i >= securityRawsStartFrom && i <= securityRawsStartFrom + securityRawsLength) {
             let rowObj: Security | undefined = convertSecurityTeam(rows[i])
             if (rowObj !== undefined) {
                 Ministers.SecuritySchedule.push(rowObj)
@@ -241,7 +248,6 @@ function isThereConflictsInSchedule(audioTeam: AudioTeam, st: Security): boolean
 export function sendNotification(speakers: SpeakerSchedule | undefined, ministers: MinistersScheduleRaw, bot: TgBot, scheduleOptions: ScheduleOptions) {
     const filteredMinisters = FilterMinisterRowsByCriteria(ministers, scheduleOptions.force ?? false)
 
-
     const securitySchedule = GetSecurityScheduleByDate(moment(), ministers)
 
     if (NotificateThatYouHaveSomethingBroken(filteredMinisters, speakers, securitySchedule, scheduleOptions, bot)) {
@@ -301,11 +307,20 @@ function NotificateThatYouHaveSomethingBroken(ministers: MinisterScheduleToday, 
 }
 
 function GetSecurityScheduleByDate(date: moment.Moment, m: MinistersScheduleRaw): Security | undefined {
+    if (m.SecuritySchedule.length == 0) {
+        logger.info("No security schedule found in excel")
+        return undefined
+    }
+
     for (let i = 0; i < m.SecuritySchedule.length; i++) {
         if (date.format("YYYY-MM-DD") === m.SecuritySchedule[i].Date.format("YYYY-MM-DD")) {
             return m.SecuritySchedule[i]
+        } else {
+            logger.info(`[GetSecurityScheduleByDate] compared ${date.format("YYYY-MM-DD")} with ${m.SecuritySchedule[i].Date.format("YYYY-MM-DD")}`)
         }
     }
+
+    logger.info(`No security schedule found for ${date.format("YYYY-MM-DD")}`)
 }
 
 
@@ -426,8 +441,6 @@ function MicrophoneDictionary(s: string): string {
     ministersDictionary.set("Страшник Аурел", "@AurelStrashnik")
     ministersDictionary.set("Белоусов Николай", "@tokimedo")
     ministersDictionary.set("Яврумян Алик", "Яврумян Алик")
-
-
 
     return ministersDictionary.get(s) ?? s
 }

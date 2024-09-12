@@ -4,9 +4,6 @@ exports.getLatestMinistersSchedule = exports.isTuesday = exports.isTuesdayOrSatu
 const tslib_1 = require("tslib");
 const logger_1 = tslib_1.__importDefault(require("../logger/logger"));
 const moment_1 = tslib_1.__importDefault(require("moment"));
-const AUDIO_TEAM_ROW_NUMBER = 11;
-const SECURITY_TEAM_ROW_START = 16;
-const SECURITY_TEAM_ROW_END = 25;
 async function runOnTuesdayAndSaturday(NotifyNow, bot) {
     setInterval(() => {
         const now = new Date();
@@ -33,26 +30,25 @@ exports.runOnTuesdayAndSaturday = runOnTuesdayAndSaturday;
 function SpeakerScheduleFromRawRows(rows) {
     let todayDateLine = 0;
     let nextDateLine = 0;
-    logger_1.default.info("today is ");
     for (let i = 1; i < rows.length; i++) {
-        if (rows[i][1] !== undefined && (0, moment_1.default)(rows[i][1], 'DD.MM.YYYY').isSame((0, moment_1.default)(), 'day')) {
+        if (rows[i][1] !== undefined && (0, moment_1.default)(rows[i][1], 'DD.MM.YYYY').isSame((0, moment_1.default)().subtract(1, 'days'), 'day')) {
             todayDateLine = i;
             logger_1.default.info("Got line where to start :" + todayDateLine);
         }
-        if (rows[i][1] !== undefined && (0, moment_1.default)(rows[i][1], 'DD.MM.YYYY').isSame((0, moment_1.default)().add(7, 'days'), 'day')) {
+        if (rows[i][1] !== undefined && (0, moment_1.default)(rows[i][1], 'DD.MM.YYYY').isSame((0, moment_1.default)().add(4, 'days'), 'day')) {
             nextDateLine = i;
             logger_1.default.info("Got line where to end :" + nextDateLine);
             break;
         }
     }
-    if (todayDateLine == 0 && nextDateLine == 0) {
+    if (todayDateLine == 0 || nextDateLine == 0) {
         logger_1.default.info("Got nothing about speakers in excel");
         return undefined;
     }
     let schedule = {
         Date: (0, moment_1.default)()
     };
-    for (let i = todayDateLine; i <= nextDateLine; i++) {
+    for (let i = todayDateLine; i < nextDateLine; i++) {
         if (rows[i].some(cell => cell.includes("Председатель:")) && schedule.Chairman === undefined) {
             schedule.Chairman = rows[i][6];
             logger_1.default.info("Got Role: " + rows[i][6]);
@@ -98,15 +94,23 @@ function MinisterScheduleFromRawRows(rows) {
         AudioTeamSchedule: [],
         SecuritySchedule: [],
     };
-    const rowsToHandle = rows.length > SECURITY_TEAM_ROW_END ? SECURITY_TEAM_ROW_END : rows.length;
-    for (let i = 1; i < rowsToHandle; i++) {
-        if (i < AUDIO_TEAM_ROW_NUMBER) {
+    let securityRawsStartFrom = 0;
+    let securityRawsLength = 15;
+    for (let i = 1; i < rows.length; i++) {
+        if (rows[i].some(cell => cell.includes("Распорядитель Зал"))) {
+            securityRawsStartFrom = i + 1;
+            break;
+        }
+    }
+    let AudioTeamRawsEndIn = securityRawsStartFrom - 1;
+    for (let i = 0; i < rows.length; i++) {
+        if (i <= AudioTeamRawsEndIn) {
             let rowObj = convertAudioTeamRows(rows[i]);
             if (rowObj !== undefined) {
                 Ministers.AudioTeamSchedule.push(rowObj);
             }
         }
-        if (i >= SECURITY_TEAM_ROW_START && i <= SECURITY_TEAM_ROW_END) {
+        if (i >= securityRawsStartFrom && i <= securityRawsStartFrom + securityRawsLength) {
             let rowObj = convertSecurityTeam(rows[i]);
             if (rowObj !== undefined) {
                 Ministers.SecuritySchedule.push(rowObj);
@@ -208,11 +212,19 @@ function NotificateThatYouHaveSomethingBroken(ministers, speaker, security, opti
     }
 }
 function GetSecurityScheduleByDate(date, m) {
+    if (m.SecuritySchedule.length == 0) {
+        logger_1.default.info("No security schedule found in excel");
+        return undefined;
+    }
     for (let i = 0; i < m.SecuritySchedule.length; i++) {
         if (date.format("YYYY-MM-DD") === m.SecuritySchedule[i].Date.format("YYYY-MM-DD")) {
             return m.SecuritySchedule[i];
         }
+        else {
+            logger_1.default.info(`[GetSecurityScheduleByDate] compared ${date.format("YYYY-MM-DD")} with ${m.SecuritySchedule[i].Date.format("YYYY-MM-DD")}`);
+        }
     }
+    logger_1.default.info(`No security schedule found for ${date.format("YYYY-MM-DD")}`);
 }
 function convertSecurityTeam(row) {
     const date = (0, moment_1.default)(row[1], "DD-MM-YYYY");
