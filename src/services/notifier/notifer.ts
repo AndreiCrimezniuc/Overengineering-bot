@@ -81,7 +81,7 @@ export function SpeakerScheduleFromRawRows(rows: string[][]): SpeakerSchedule | 
             todayDateLine = i
             logger.info("Got line where to start :" + todayDateLine)
         }
-        if (rows[i][1] !== undefined && moment(rows[i][1], 'DD.MM.YYYY').isSame(moment().add(4, 'days'), 'day')) {
+        if (rows[i][1] !== undefined && moment(rows[i][1], 'DD.MM.YYYY').isSame(moment().add(6, 'days'), 'day')) {
             nextDateLine = i;
             logger.info("Got line where to end :" + nextDateLine)
 
