@@ -31,24 +31,24 @@ function SpeakerScheduleFromRawRows(rows) {
     let todayDateLine = 0;
     let nextDateLine = 0;
     for (let i = 1; i < rows.length; i++) {
-        if (rows[i][1] !== undefined && (0, moment_1.default)(rows[i][1], 'DD.MM.YYYY').isSame((0, moment_1.default)().add(1, 'days'), 'day')) {
+        if (rows[i][1] !== undefined && (0, moment_1.default)(rows[i][1], 'DD.MM.YYYY').isSame((0, moment_1.default)().subtract(1, 'days'), 'day')) {
             todayDateLine = i;
             logger_1.default.info("Got line where to start :" + todayDateLine);
         }
-        if (rows[i][1] !== undefined && (0, moment_1.default)(rows[i][1], 'DD.MM.YYYY').isSame((0, moment_1.default)().add(6, 'days'), 'day')) {
+        if (rows[i][1] !== undefined && (0, moment_1.default)(rows[i][1], 'DD.MM.YYYY').isSame((0, moment_1.default)().add(4, 'days'), 'day')) {
             nextDateLine = i;
             logger_1.default.info("Got line where to end :" + nextDateLine);
             break;
         }
     }
-    if (todayDateLine == 0 && nextDateLine == 0) {
+    if (todayDateLine == 0 || nextDateLine == 0) {
         logger_1.default.info("Got nothing about speakers in excel");
         return undefined;
     }
     let schedule = {
         Date: (0, moment_1.default)()
     };
-    for (let i = todayDateLine; i <= nextDateLine; i++) {
+    for (let i = todayDateLine; i < nextDateLine; i++) {
         if (rows[i].some(cell => cell.includes("Председатель:")) && schedule.Chairman === undefined) {
             schedule.Chairman = rows[i][6];
             logger_1.default.info("Got Role: " + rows[i][6]);
